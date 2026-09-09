@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    conditionalFormattings: []
+    hideRowNumbers: false
+    showColumnCalculation: true
+    showResultsTotal: true
+    showRowCalculation: false
+    showTableNames: false
+  type: table
+contentType: chart
+description: Customers ranked by net revenue, all time, cancellations excluded.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+    - dim_customers_full_name
+    - dim_customers_city
+    - dim_customers_customer_segment
+    - dim_customers_lifetime_order_count
+  exploreName: dim_customers
+  filters: {}
+  limit: 20
+  metricOverrides: {}
+  metrics:
+    - dim_customers_lifetime_value_eur
+  sorts:
+    - descending: true
+      fieldId: dim_customers_lifetime_value_eur
+  tableCalculations: []
+  timezone: project_timezone
+name: Top customers by lifetime value
+slug: top-customers
+spaceSlug: reference-architecture
+tableConfig:
+  columnOrder:
+    - dim_customers_full_name
+    - dim_customers_city
+    - dim_customers_customer_segment
+    - dim_customers_lifetime_order_count
+    - dim_customers_lifetime_value_eur
+tableName: dim_customers
+verification: null
+version: 1

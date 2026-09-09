@@ -1,0 +1,41 @@
+chartConfig:
+  config:
+    conditionalFormattings: []
+    hideRowNumbers: false
+    showColumnCalculation: true
+    showResultsTotal: true
+    showRowCalculation: false
+    showTableNames: false
+  type: table
+contentType: chart
+description: The catalogue ranked by revenue attributed to each product line.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+    - dim_products_product_name
+    - dim_products_product_category
+  exploreName: fct_order_items
+  filters: {}
+  limit: 15
+  metricOverrides: {}
+  metrics:
+    - fct_order_items_line_revenue_eur
+    - fct_order_items_units_sold
+  sorts:
+    - descending: true
+      fieldId: fct_order_items_line_revenue_eur
+  tableCalculations: []
+  timezone: project_timezone
+name: Top products by revenue
+slug: top-products-by-revenue
+spaceSlug: reference-architecture
+tableConfig:
+  columnOrder:
+    - dim_products_product_name
+    - dim_products_product_category
+    - fct_order_items_line_revenue_eur
+    - fct_order_items_units_sold
+tableName: fct_order_items
+verification: null
+version: 1

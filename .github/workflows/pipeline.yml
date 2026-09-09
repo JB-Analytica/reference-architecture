@@ -1,0 +1,54 @@
+name: Pipeline
+
+# The production run: regenerate the source system, load it, transform it, publish it.
+#
+# Manual only, on purpose. A nightly schedule would keep issuing BigQuery jobs and Lightdash
+# deploys forever, on a demo stack nobody is watching. Run it from the Actions tab, or with
+# `gh workflow run pipeline.yml`. To put it back on a timer, add a `schedule:` trigger here.
+on:
+  workflow_dispatch:
+
+# One pipeline run at a time. Two overlapping runs would race on the same dlt pipeline
+# state and the same BigQuery datasets, and a merge that interleaves with another merge is
+# how you get a load that silently drops rows.
+concurrency:
+  group: pipeline
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/.sa.json
+      DBT_TARGET: prod
+      LIGHTDASH_API_KEY: ${{ secrets.LIGHTDASH_API_KEY }}
+      LIGHTDASH_PROJECT_UUID: ${{ secrets.LIGHTDASH_PROJECT_UUID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v7
+        with:
+          # The Lightdash CLI requires Node >= 24 for upload/download.
+          node-version: 24
+      - run: npm install -g @lightdash/cli@2.177.0
+      - run: uv sync
+      # Passed through the environment, not interpolated into the shell command: a key
+      # containing a quote would otherwise break the redirect or spill into the log.
+      # The key already names its project, so GCP_PROJECT is derived from it rather than
+      # kept as a second secret that could drift out of sync with the first.
+      - name: Write service-account key and derive the project
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          printf '%s' "$GCP_SA_KEY" > .sa.json
+          python3 -c "import json;print('GCP_PROJECT='+json.load(open('.sa.json'))['project_id'])" >> "$GITHUB_ENV"
+      # refarch deploy passes --project explicitly, so no project needs selecting here.
+      - name: Log the Lightdash CLI in
+        run: |
+          lightdash login https://app.lightdash.cloud --token "$LIGHTDASH_API_KEY"
+      - name: generate -> load -> transform -> deploy
+        run: uv run refarch run --target prod
+      - name: Source freshness
+        run: uv run refarch transform source freshness --target prod

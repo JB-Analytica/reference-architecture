@@ -1,0 +1,150 @@
+contentType: dashboard
+description: >
+  Trading overview for the webshop: revenue and its trend, where it comes from,
+  how fast orders are fulfilled, and which products and customers drive it.
+  Every number on this dashboard is a metric defined in dbt, not in Lightdash.
+filters:
+  dimensions: []
+  metrics: []
+  tableCalculations: []
+name: Webshop performance
+slug: webshop-performance
+spaceSlug: reference-architecture
+tabs: []
+tiles:
+  - h: 2
+    properties:
+      content: >-
+        ## Trading overview
+
+        Revenue, fulfilment and customers for the last twelve months. Metrics
+        come from the dbt semantic layer.
+      hideFrame: false
+      title: ""
+    tabSlug: null
+    type: markdown
+    w: 36
+    x: 0
+    "y": 0
+  - h: 4
+    properties:
+      chartName: Total net revenue
+      chartSlug: total-net-revenue
+      hideTitle: false
+      title: Net revenue
+    tabSlug: null
+    tileSlug: total-net-revenue
+    type: saved_chart
+    w: 12
+    x: 0
+    "y": 2
+  - h: 4
+    properties:
+      chartName: Average order value
+      chartSlug: average-order-value
+      hideTitle: false
+      title: Average order value
+    tabSlug: null
+    tileSlug: average-order-value
+    type: saved_chart
+    w: 12
+    x: 12
+    "y": 2
+  - h: 4
+    properties:
+      chartName: Cancellation rate
+      chartSlug: cancellation-rate
+      hideTitle: false
+      title: Cancellation rate
+    tabSlug: null
+    tileSlug: cancellation-rate
+    type: saved_chart
+    w: 12
+    x: 24
+    "y": 2
+  - h: 8
+    properties:
+      chartName: Net revenue by month
+      chartSlug: revenue-by-month
+      hideTitle: false
+      title: Net revenue by month
+    tabSlug: null
+    tileSlug: revenue-by-month
+    type: saved_chart
+    w: 24
+    x: 0
+    "y": 6
+  - h: 8
+    properties:
+      chartName: Order status mix
+      chartSlug: order-status-mix
+      hideTitle: false
+      title: Order status mix
+    tabSlug: null
+    tileSlug: order-status-mix
+    type: saved_chart
+    w: 12
+    x: 24
+    "y": 6
+  - h: 8
+    properties:
+      chartName: Revenue by sales channel
+      chartSlug: revenue-by-channel
+      hideTitle: false
+      title: Revenue by sales channel
+    tabSlug: null
+    tileSlug: revenue-by-channel
+    type: saved_chart
+    w: 18
+    x: 0
+    "y": 14
+  - h: 8
+    properties:
+      chartName: Fulfilment speed by month
+      chartSlug: fulfilment-speed-by-month
+      hideTitle: false
+      title: Fulfilment speed by month
+    tabSlug: null
+    tileSlug: fulfilment-speed-by-month
+    type: saved_chart
+    w: 18
+    x: 18
+    "y": 14
+  - h: 2
+    properties:
+      content: |-
+        ## What is driving it
+        Products and customers behind the numbers above.
+      hideFrame: false
+      title: ""
+    tabSlug: null
+    type: markdown
+    w: 36
+    x: 0
+    "y": 22
+  - h: 9
+    properties:
+      chartName: Top products by revenue
+      chartSlug: top-products-by-revenue
+      hideTitle: false
+      title: Top products by revenue
+    tabSlug: null
+    tileSlug: top-products-by-revenue
+    type: saved_chart
+    w: 18
+    x: 0
+    "y": 24
+  - h: 9
+    properties:
+      chartName: Top customers by lifetime value
+      chartSlug: top-customers
+      hideTitle: false
+      title: Top customers by lifetime value
+    tabSlug: null
+    tileSlug: top-customers
+    type: saved_chart
+    w: 18
+    x: 18
+    "y": 24
+verification: null
+version: 1

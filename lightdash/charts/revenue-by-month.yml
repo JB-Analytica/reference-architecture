@@ -1,0 +1,51 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      legend:
+        orient: horizontal
+        show: false
+      series:
+        - encode:
+            xRef:
+              field: fct_orders_ordered_at_month
+            yRef:
+              field: fct_orders_net_revenue_eur
+          isFilteredOut: false
+          name: Net revenue
+          type: bar
+          yAxisIndex: 0
+    layout:
+      flipAxes: false
+      stack: false
+      xField: fct_orders_ordered_at_month
+      yField:
+        - fct_orders_net_revenue_eur
+  type: cartesian
+contentType: chart
+description: Net revenue after discounts, by month the order was placed.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+    - fct_orders_ordered_at_month
+  exploreName: fct_orders
+  filters: {}
+  limit: 500
+  metricOverrides: {}
+  metrics:
+    - fct_orders_net_revenue_eur
+  sorts:
+    - descending: false
+      fieldId: fct_orders_ordered_at_month
+  tableCalculations: []
+  timezone: project_timezone
+name: Net revenue by month
+slug: revenue-by-month
+spaceSlug: reference-architecture
+tableConfig:
+  columnOrder:
+    - fct_orders_ordered_at_month
+    - fct_orders_net_revenue_eur
+tableName: fct_orders
+verification: null
+version: 1

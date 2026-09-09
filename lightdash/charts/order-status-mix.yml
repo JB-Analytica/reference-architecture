@@ -1,0 +1,37 @@
+chartConfig:
+  config:
+    groupFieldIds:
+      - fct_orders_order_status
+    isDonut: true
+    metricId: fct_orders_order_count
+    showLegend: true
+    valueLabel: inside
+  type: pie
+contentType: chart
+description: How orders are distributed across the fulfilment lifecycle.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+    - fct_orders_order_status
+  exploreName: fct_orders
+  filters: {}
+  limit: 500
+  metricOverrides: {}
+  metrics:
+    - fct_orders_order_count
+  sorts:
+    - descending: true
+      fieldId: fct_orders_order_count
+  tableCalculations: []
+  timezone: project_timezone
+name: Order status mix
+slug: order-status-mix
+spaceSlug: reference-architecture
+tableConfig:
+  columnOrder:
+    - fct_orders_order_status
+    - fct_orders_order_count
+tableName: fct_orders
+verification: null
+version: 1

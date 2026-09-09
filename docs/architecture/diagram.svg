@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="Reference architecture. Two interchangeable sources, a synthetic DuckDB generated from a DBML model and a real production database, meet at a single swap point: one SQLAlchemy connection string. Right of that seam, dlt extracts incrementally and merges on primary key into BigQuery raw tables, dbt builds staging, intermediate and mart layers, and only models tagged lightdash become Lightdash explores. Everything right of the seam is unchanged when the source changes.">
+  <defs>
+    <marker id="ah-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#FFC46B"/>
+    </marker>
+    <marker id="ah-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7FB4F5"/>
+    </marker>
+    <marker id="ah-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#B08CFF"/>
+    </marker>
+    <marker id="ah-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2FBBA0"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" fill="#071D3D"/>
+
+  <!-- ── Title ─────────────────────────────────────────────────────────── -->
+  <text x="64" y="92" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="15" letter-spacing="2.1" fill="#FFC46B">REFERENCE ARCHITECTURE</text>
+  <text x="64" y="142" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="42" font-weight="700" letter-spacing="-0.4" fill="#F6F8FB">Build the whole stack before you have the data</text>
+  <text x="64" y="180" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="19" fill="#A8C9EE">A synthetic source system is a real one, from the pipeline's point of view. Swap it for a production database and nothing downstream moves.</text>
+
+  <!-- ── BigQuery grouping ─────────────────────────────────────────────── -->
+  <rect x="719" y="256" width="540" height="316" rx="14" fill="none" stroke="#B08CFF" stroke-opacity="0.32" stroke-width="1.5" stroke-dasharray="7 6"/>
+  <text x="735" y="282" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="13" letter-spacing="1.6" fill="#B08CFF">BIGQUERY</text>
+
+  <!-- ── Sources: interchangeable, deliberately neutral ────────────────── -->
+  <rect x="64" y="296" width="185" height="104" rx="12" fill="#0A3866" stroke="#7690B1" stroke-width="1.5"/>
+  <text x="84" y="326" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="12" letter-spacing="1.5" fill="#7690B1">DEV</text>
+  <text x="84" y="352" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="600" fill="#F6F8FB">Synthetic source</text>
+  <text x="84" y="376" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#A8C9EE">DBML → model2data</text>
+
+  <rect x="64" y="428" width="185" height="104" rx="12" fill="#0A3866" stroke="#7690B1" stroke-width="1.5"/>
+  <text x="84" y="458" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="12" letter-spacing="1.5" fill="#7690B1">PRODUCTION</text>
+  <text x="84" y="484" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="600" fill="#F6F8FB">Real database</text>
+  <text x="84" y="508" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#A8C9EE">Postgres · MySQL</text>
+
+  <line x1="249" y1="348" x2="340" y2="348" stroke="#7690B1" stroke-width="2"/>
+  <line x1="249" y1="480" x2="340" y2="480" stroke="#7690B1" stroke-width="2"/>
+
+  <!-- ── The seam: the one thing that changes ──────────────────────────── -->
+  <line x1="340" y1="266" x2="340" y2="570" stroke="#FFC46B" stroke-width="2.5" stroke-dasharray="8 7"/>
+  <circle cx="340" cy="348" r="4.5" fill="#FFC46B"/>
+  <circle cx="340" cy="480" r="4.5" fill="#FFC46B"/>
+  <text x="340" y="246" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="13" letter-spacing="1.6" fill="#FFC46B">SWAP POINT</text>
+  <text x="340" y="596" text-anchor="middle" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="14.5" fill="#FFC46B">one SQLAlchemy URL</text>
+  <line x1="340" y1="414" x2="436" y2="414" stroke="#FFC46B" stroke-width="2.5" marker-end="url(#ah-amber)"/>
+
+  <!-- ── 01 Extract ────────────────────────────────────────────────────── -->
+  <rect x="442" y="338" width="185" height="152" rx="12" fill="#0A3866" stroke="#7FB4F5" stroke-width="2"/>
+  <text x="462" y="368" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="12" letter-spacing="1.5" fill="#7FB4F5">01 · EXTRACT</text>
+  <text x="462" y="400" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="21" font-weight="600" fill="#F6F8FB">dlt</text>
+  <text x="462" y="428" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#A8C9EE">sql_database source</text>
+  <text x="462" y="450" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#A8C9EE">cursor: updated_at</text>
+  <line x1="627" y1="414" x2="739" y2="414" stroke="#7FB4F5" stroke-width="2.5" marker-end="url(#ah-blue)"/>
+  <text x="683" y="400" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="12.5" fill="#7FB4F5">merge on id</text>
+
+  <!-- ── 02 Land ───────────────────────────────────────────────────────── -->
+  <rect x="745" y="338" width="185" height="152" rx="12" fill="#0A3866" stroke="#B08CFF" stroke-width="2"/>
+  <text x="765" y="368" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="12" letter-spacing="1.5" fill="#B08CFF">02 · LAND</text>
+  <text x="765" y="400" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="21" font-weight="600" fill="#F6F8FB">raw_webshop</text>
+  <text x="765" y="428" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#A8C9EE">landed unchanged</text>
+  <text x="765" y="450" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#A8C9EE">+ dlt load lineage</text>
+  <line x1="930" y1="414" x2="1042" y2="414" stroke="#B08CFF" stroke-width="2.5" marker-end="url(#ah-purple)"/>
+  <text x="986" y="400" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="12.5" fill="#B08CFF">rename · cast</text>
+
+  <!-- ── 03 Transform ──────────────────────────────────────────────────── -->
+  <rect x="1048" y="282" width="185" height="266" rx="12" fill="#0A3866" stroke="#B08CFF" stroke-width="2"/>
+  <text x="1068" y="312" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="12" letter-spacing="1.5" fill="#B08CFF">03 · TRANSFORM</text>
+  <text x="1068" y="342" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="21" font-weight="600" fill="#F6F8FB">dbt</text>
+
+  <rect x="1064" y="358" width="153" height="50" rx="8" fill="#071D3D" stroke="#7690B1" stroke-width="1.2"/>
+  <text x="1078" y="380" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#F6F8FB">staging</text>
+  <text x="1078" y="398" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#7690B1">one per source table</text>
+
+  <rect x="1064" y="416" width="153" height="50" rx="8" fill="#071D3D" stroke="#7690B1" stroke-width="1.2"/>
+  <text x="1078" y="438" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#F6F8FB">intermediate</text>
+  <text x="1078" y="456" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#7690B1">shared maths, once</text>
+
+  <rect x="1064" y="474" width="153" height="50" rx="8" fill="#0A3866" stroke="#2FBBA0" stroke-width="1.8"/>
+  <text x="1078" y="496" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="15" font-weight="600" fill="#F6F8FB">marts</text>
+  <text x="1078" y="514" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#2FBBA0">metrics defined here</text>
+
+  <line x1="1233" y1="499" x2="1345" y2="499" stroke="#2FBBA0" stroke-width="2.5" marker-end="url(#ah-teal)"/>
+  <text x="1289" y="485" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="12.5" fill="#2FBBA0">tag: lightdash</text>
+
+  <!-- ── 04 Present ────────────────────────────────────────────────────── -->
+  <rect x="1351" y="423" width="185" height="152" rx="12" fill="#0A3866" stroke="#2FBBA0" stroke-width="2"/>
+  <text x="1371" y="453" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="12" letter-spacing="1.5" fill="#2FBBA0">04 · PRESENT</text>
+  <text x="1371" y="485" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="21" font-weight="600" fill="#F6F8FB">Lightdash</text>
+  <text x="1371" y="513" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#A8C9EE">metrics live in dbt</text>
+  <text x="1371" y="535" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#A8C9EE">charts as code</text>
+
+  <!-- ── The claim ─────────────────────────────────────────────────────── -->
+  <path d="M 366 648 L 366 632 L 1536 632 L 1536 648" fill="none" stroke="#7690B1" stroke-width="1.5"/>
+  <text x="951" y="682" text-anchor="middle" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="17" fill="#F6F8FB">Everything right of the seam is unchanged when the source changes</text>
+
+  <!-- ── Measured, not claimed ─────────────────────────────────────────── -->
+  <line x1="64" y1="762" x2="1536" y2="762" stroke="#0A3866" stroke-width="1.5"/>
+  <text x="64" y="802" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="15" fill="#A8C9EE">13,648 rows generated   ·   64 dbt tests, 0 failures   ·   9 explores   ·   re-running the load adds 0 duplicate rows</text>
+  <text x="64" y="842" font-family="'Poppins', 'Helvetica Neue', Arial, sans-serif" font-size="14" fill="#7690B1">JB Analytica · model2data · dlt · dbt · Lightdash</text>
+</svg>

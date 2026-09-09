@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    name: Lint, types, tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+      - run: uv sync --all-extras
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run ty check refarch
+      - run: uv run pytest
+
+  dbt:
+    name: dbt build against BigQuery (dev target)
+    runs-on: ubuntu-latest
+    needs: checks
+    env:
+      HAS_GCP_KEY: ${{ secrets.GCP_SA_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+      - run: uv sync
+      # The key already names its project, so deriving GCP_PROJECT from it keeps the two in
+      # step and saves a second secret that could drift out of sync with the first.
+      - name: Write service-account key and derive the project
+        if: env.HAS_GCP_KEY == 'true'
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          printf '%s' "$GCP_SA_KEY" > "$RUNNER_TEMP/sa.json"
+          python3 -c "import json,os;print('GCP_PROJECT='+json.load(open(os.environ['RUNNER_TEMP']+'/sa.json'))['project_id'])" >> "$GITHUB_ENV"
+      - name: dbt build
+        if: env.HAS_GCP_KEY == 'true'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+          DBT_TARGET: dev
+        run: uv run refarch transform
+      - name: Skipped (no GCP_SA_KEY secret)
+        if: env.HAS_GCP_KEY != 'true'
+        run: echo "Add the GCP_SA_KEY repository secret to run dbt in CI."

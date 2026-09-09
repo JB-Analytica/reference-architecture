@@ -1,0 +1,31 @@
+chartConfig:
+  config:
+    label: Cancellation rate
+    selectedField: fct_orders_cancellation_rate
+    showBigNumberLabel: true
+    showComparison: false
+  type: big_number
+contentType: chart
+description: Share of orders cancelled, across the whole period.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions: []
+  exploreName: fct_orders
+  filters: {}
+  limit: 1
+  metricOverrides: {}
+  metrics:
+    - fct_orders_cancellation_rate
+  sorts: []
+  tableCalculations: []
+  timezone: project_timezone
+name: Cancellation rate
+slug: cancellation-rate
+spaceSlug: reference-architecture
+tableConfig:
+  columnOrder:
+    - fct_orders_cancellation_rate
+tableName: fct_orders
+verification: null
+version: 1

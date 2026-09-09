@@ -1,0 +1,25 @@
+# Checked in on purpose: it contains no secrets. The key file path, project and target come
+# from the environment (.env locally, repository secrets in CI).
+refarch:
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      project: "{{ env_var('GCP_PROJECT') }}"
+      dataset: refarch_dev
+      location: "{{ env_var('BIGQUERY_LOCATION', 'EU') }}"
+      threads: 8
+      priority: interactive
+      job_execution_timeout_seconds: 300
+    prod:
+      type: bigquery
+      method: service-account
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      project: "{{ env_var('GCP_PROJECT') }}"
+      dataset: refarch
+      location: "{{ env_var('BIGQUERY_LOCATION', 'EU') }}"
+      threads: 8
+      priority: interactive
+      job_execution_timeout_seconds: 300

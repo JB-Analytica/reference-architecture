@@ -1,0 +1,8 @@
+# Access is deliberately not declared here. Lightdash leaves a space's existing
+# permissions untouched when the key is omitted, so the repo never carries a list
+# of who can see what -- that belongs in the workspace, not in version control,
+# and it would be wrong the moment this is deployed anywhere else.
+contentType: space
+slug: reference-architecture
+spaceName: Reference architecture
+version: 1
