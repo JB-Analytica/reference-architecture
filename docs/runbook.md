@@ -46,7 +46,7 @@ against whatever `transform` already built. The built report is a static site at
 `evidence/build/index.html`. Serve it -- `npm run preview` from `evidence/`, or any static
 file server. Opening it straight off the filesystem does not work: the asset URLs are absolute
 from the site root, so over `file://` they resolve to the root of your disk and the page loads
-unstyled. The published copy is at https://jb-analytica.github.io/reference-architecture/.
+unstyled. The published copy is at https://reference.jbanalytica.com/.
 
 ## Changing the data model
 

@@ -104,11 +104,13 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   `directory` it is given, so the warehouse can only be named relative to
   `evidence/sources/refarch/`. `refarch report` computes that relative path; do not "simplify" it
   to an absolute one.
-- **The published report is a project site, so it lives under `/reference-architecture`.** Any
-  asset referenced from a page or from `app.css` must go through SvelteKit's `base` (or a
-  relative url() Vite can rewrite) — a root-absolute path works locally and 404s in production.
-  `refarch report --base-path` writes the value in for the build and takes it out again; never
-  commit it.
+- **Never assume where the published report sits.** It is on the custom domain
+  `reference.jbanalytica.com` at the domain root, so the base path is currently empty; as a plain
+  project site it would be `/reference-architecture`. `pages.yml` asks `actions/configure-pages`
+  for the value, so this can change without a code edit. Any asset referenced from a page or from
+  `app.css` must therefore go through SvelteKit's `base` (or a relative url() Vite can rewrite) —
+  a root-absolute path works locally and 404s the moment a prefix exists. `refarch report
+  --base-path` writes the value in for the build and takes it out again; never commit it.
 - **The built report needs a web root, not `file://`.** Its asset URLs are absolute from the
   site root. Serve it with `npm run preview`; opening `build/index.html` directly renders it
   unstyled.

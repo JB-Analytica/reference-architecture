@@ -1,5 +1,9 @@
 # Reference architecture
 
+[![CI](https://github.com/JB-Analytica/reference-architecture/actions/workflows/ci.yml/badge.svg)](https://github.com/JB-Analytica/reference-architecture/actions/workflows/ci.yml)
+[![Report](https://img.shields.io/badge/report-live-0C6EBA)](https://reference.jbanalytica.com/)
+[![Licence](https://img.shields.io/badge/licence-MIT-A15700)](LICENSE)
+
 A complete, running analytics stack that you can clone and run against a local DuckDB file with
 no account and no credentials. Only the report stage needs anything beyond `uv` — see
 [What you need first](#what-you-need-first). It points at a real warehouse by changing one
@@ -83,30 +87,40 @@ not have Node installed.
 
 A finished run builds 68 dbt nodes — 4 table models, 5 view models, 58 data tests and 1 unit
 test — all passing, against 4,000 orders and about €329,400 of realised net revenue (€346,600
-booked, before cancellations) that grows visibly month over month. Re-running the load adds no duplicate rows, because every table merges
-on its primary key. Open the warehouse with `duckdb warehouse/refarch.duckdb`, then
-`show all tables` — the file holds the raw layer and every dbt schema together. Open the report
-at https://jb-analytica.github.io/reference-architecture/, or build it and serve it locally
+booked, before cancellations) that grows visibly month over month. Re-running the load adds no
+duplicate rows, because every table merges on its primary key. Open the warehouse with
+`duckdb warehouse/refarch.duckdb`, then `show all tables` — the file holds the raw layer and
+every dbt schema together. Open the report
+at https://reference.jbanalytica.com/, or build it and serve it locally
 with `npm run preview` from `evidence/`.
 
 ## The report
 
-The stack used to end at Lightdash, which has no DuckDB connector and so could not make the move;
-it was removed along with `refarch/lightdash_api.py`, the `lightdash/` directory and the `deploy`
-command. Its replacement is [Evidence](https://evidence.dev/), chosen over Rill Developer and
-dbt's own MetricFlow for one reason: `evidence build` emits a self-contained static site — HTML
-plus a handful of parquet files, about 87 MB, most of it the DuckDB WASM bundle that lets the
-browser query the parquet directly. A reader can see the dashboards without running anything,
-which the other two candidates cannot do.
+The report is [Evidence](https://evidence.dev/), chosen over Rill Developer and dbt's own
+MetricFlow for one reason: `evidence build` emits a self-contained static site — HTML plus a
+handful of parquet files, around 105 MB of which almost all is the DuckDB WASM bundle that lets
+the browser query that parquet directly. A reader can see the dashboards without installing or
+running anything, which the other two candidates cannot do. That is why there is a live link at
+the top of this file.
 
-The report lives in `evidence/`. `evidence/pages/` holds five pages — `index.md` (net revenue,
-orders, average order value and cancellation rate, plus net revenue by month and by channel,
-order status mix, and average days to ship by month), `products.md` (top ten products by net
-revenue), `customers.md` (top twenty customers, plus lifetime net revenue by segment) and
-`cancellations.md` (rate and lost revenue over time, by channel and by product). The first three
-carry the nine figures this stack used to publish to Lightdash; the fourth is new. The fifth,
-`architecture.md`, is the stack explained to whoever opens the published report without ever
-seeing this repository — including what the synthetic data cannot tell them.
+The stack used to end at Lightdash, which has no DuckDB connector and so could not make the move
+off BigQuery; it went along with `refarch/lightdash_api.py`, the `lightdash/` directory and the
+`deploy` command. What that trade cost is spelled out under [Revenue](#revenue) below.
+
+The report lives in `evidence/`, and `evidence/pages/` holds five:
+
+| Page | What is on it |
+|---|---|
+| `index.md` | Net revenue, orders, average order value and cancellation rate; net revenue by month and by channel; order status mix; average days to ship by month |
+| `products.md` | Top ten products by net revenue |
+| `customers.md` | Top twenty customers, and lifetime net revenue by segment |
+| `cancellations.md` | Rate and lost revenue over time, by channel and by product |
+| `architecture.md` | The stack, the seam, and what the synthetic data cannot tell you |
+
+The first three carry the nine figures this stack used to publish to Lightdash. `cancellations.md`
+is new. `architecture.md` exists because the published report is read by people who will never
+open this repository, and a dashboard that will not say where its numbers come from — or where
+its data is thin — is the thing this whole project is arguing against.
 `evidence/sources/refarch/` holds the connection and four thin passthrough queries, one per mart.
 
 The report reads the **prod** marts: Evidence's source queries name `refarch_marts` literally and
@@ -132,11 +146,11 @@ re-derives correctly when rolled up from day to month, which a stored ratio woul
 
 Evidence has no semantic layer of its own, so the trade from the Lightdash days is real: the dbt
 marts are now the semantic layer for column definitions — `net_amount_eur`, `is_cancelled`,
-`days_to_ship`, `lifetime_realised_net_revenue_eur` are all defined once in mart SQL and Evidence pages
-only group and sum them — but the aggregations themselves (`sum`, `count`, the two ratios) are
-now written in each page's SQL rather than declared once in YAML. They are still in git and still
-code-reviewed, but there is no single declarative metric definition the way Lightdash's `meta:`
-blocks were, and those blocks have been deleted from
+`days_to_ship` and `lifetime_realised_net_revenue_eur` are all defined once in mart SQL and
+Evidence pages only group and sum them — but the aggregations themselves (`sum`, `count`, the
+two ratios) are now written in each page's SQL rather than declared once in YAML. They are
+still in git and still code-reviewed, but there is no single declarative metric definition the
+way Lightdash's `meta:` blocks were, and those blocks have been deleted from
 `dbt/models/marts/_marts__models.yml` rather than kept around unused.
 
 ### Brand
@@ -168,17 +182,20 @@ them.
 
 The report is published to GitHub Pages on every push to `main`:
 
-**https://jb-analytica.github.io/reference-architecture/**
+**https://reference.jbanalytica.com/**
 
 `.github/workflows/pages.yml` runs all four stages and deploys `evidence/build`, so what is
 live is built from the DBML upwards by the same commands a reader runs locally — there is no
 checked-in copy of the report to drift out of date.
 
-A project site is served from `/<repo>` rather than the domain root, so the build needs
-`--base-path`. That value is deliberately not committed: `refarch report --base-path /x` writes
-it into `evidence.config.yaml` for the build and takes it out again, because a committed base
-path would make every asset URL absolute under `/x` and break the local preview. Pull requests
-do not publish; they get the report as a downloadable artifact from `ci.yml` instead.
+Where a Pages site sits decides how its asset URLs have to be written, and that is not a
+constant: on the custom domain above the site is at the domain root and the base path is empty,
+while a plain project site would be served from `/<repo>` and every URL would need that prefix.
+So the workflow asks `actions/configure-pages` for the value rather than hardcoding it, and
+attaching or removing a domain needs no edit. `refarch report --base-path /x` writes it into
+`evidence.config.yaml` for the build and takes it out again; committing it would make every
+asset URL absolute under `/x` and break the local preview. Pull requests do not publish — they
+get the report as a downloadable artifact from `ci.yml` instead.
 
 ## Working on it
 
@@ -199,6 +216,8 @@ including incremental merge is covered by the same kind of file the real run pro
 - `tests/` — pytest, mirroring the package.
 - `docs/` — [architecture](docs/architecture/README.md), [runbook](docs/runbook.md),
   [versions](docs/versions.md).
+- `.github/workflows/` — `ci.yml` (checks and a full run on every pull request) and `pages.yml`
+  (publishes the report from `main`).
 
 `source_system/generated/`, `warehouse/`, `.env` and `dbt/target/` are git-ignored. The generated
 data and the warehouse file are both deterministic and disposable, so they are rebuilt rather
