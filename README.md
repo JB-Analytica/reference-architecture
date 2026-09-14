@@ -98,6 +98,10 @@ with `npm run preview` from `evidence/`.
 
 ## The report
 
+[![The Webshop performance page of the built report: the JB Analytica wordmark and sidebar, four figures — net revenue, orders, average order value and cancellation rate — and a bar chart of net revenue by month](docs/img/report.png)](https://reference.jbanalytica.com/performance)
+
+*The `Webshop performance` page, built by `refarch report`. [See it live](https://reference.jbanalytica.com/).*
+
 The report is [Evidence](https://evidence.dev/), chosen over Rill Developer and dbt's own
 MetricFlow for one reason: `evidence build` emits a self-contained static site — HTML plus a
 handful of parquet files, around 105 MB of which almost all is the DuckDB WASM bundle that lets
