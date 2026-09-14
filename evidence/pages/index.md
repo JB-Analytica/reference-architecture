@@ -119,5 +119,5 @@ order by 1
     y=avg_days_to_ship
     yFmt=num1
     title="Average days to ship, by month"
-    subtitle="Orders that reached shipped or delivered"
+    subtitle="Every order carrying a shipping timestamp, by the month it was placed"
 />

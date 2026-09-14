@@ -45,7 +45,12 @@ class BusinessShape:
     business_hours: bool = True  # orders cluster in waking hours and on weekdays
     growth: float = 0.6  # the shop grows ~60% over the window
     seasonality: float = 0.4  # Q4 peak, the shape retail actually has
-    skew: float = 0.5  # a minority of customers place most of the orders
+    # No `skew` here on purpose. model2data takes a run-level --skew, but a column's own
+    # {"skew": ...} note overrides it, and every foreign key in webshop.dbml carries one
+    # (customer_id 0.7, order_id 0.3, product_id 0.6). A value set here would therefore change
+    # nothing at all -- measured: --skew 0.0, 0.5 and 1.0 produce byte-identical orders. How
+    # unevenly children spread over parents is a property of the relationship, so it belongs in
+    # the DBML with the rest of the source system's description.
 
     def cli_args(self) -> list[str]:
         args = [
@@ -65,8 +70,6 @@ class BusinessShape:
             str(self.growth),
             "--seasonality",
             str(self.seasonality),
-            "--skew",
-            str(self.skew),
             "--force",
         ]
         if self.business_hours:

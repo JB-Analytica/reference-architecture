@@ -62,7 +62,10 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   site's accessibility choices come with it: `--orange` is a fill, `--orange-text` is for text.
 - **Only marts are exposed to the report**, via the `bi` tag that `dbt_project.yml` applies to
   the marts folder. Do not tag a staging or intermediate model, and do not point an Evidence
-  source at one.
+  source at one. `tests/test_dbt_project.py` enforces both, so this fails CI rather than review.
+- **The dbt-core constraint lives in two files** — `pyproject.toml` (what uv installs) and
+  `dbt/dbt_project.yml`'s `require-dbt-version` (what is allowed to run the project, including a
+  system dbt). Change both; a test fails if they stop accepting the same versions.
 - **Warehouse SQL is DuckDB SQL.** No `initcap`, no `timestamp_diff`, no `safe_divide`. Where
   a dialect gap needs papering over, add a macro next to `cents_to_eur` and `title_case` rather
   than inlining the workaround.

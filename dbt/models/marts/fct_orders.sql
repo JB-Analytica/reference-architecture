@@ -34,8 +34,15 @@ final as (
         ) }} as realised_net_amount_eur,
         orders.order_status = 'cancelled' as is_cancelled,
         orders.order_status = 'delivered' as is_delivered,
+        -- Keyed off shipped_at alone. An order shipped if and only if it has a shipping
+        -- timestamp; order_status is a second, independent signal, and in this source the two
+        -- disagree -- 600 orders sit at cancelled, paid or pending with a shipped_at set,
+        -- because the generator draws each column independently (see
+        -- docs/architecture/README.md). Gating on status as well silently dropped every one of
+        -- them. Cancelled orders that did ship keep a real ship time; is_cancelled is on this
+        -- row for anyone who wants them out.
         case
-            when orders.order_status in ('shipped', 'delivered') and orders.shipped_at is not null
+            when orders.shipped_at is not null
                 then date_diff('hour', orders.ordered_at, orders.shipped_at) / 24.0
         end as days_to_ship
     from orders

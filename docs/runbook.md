@@ -96,6 +96,12 @@ for revenue. Before they were split, `fct_orders` counted cancelled orders as re
 ignores new data. `refarch load` says so on failure; `dlt pipeline webshop info` shows the
 package.
 
+**`days_to_ship` follows `shipped_at`, not `order_status`.** The two are independent in the
+generated source: 600 orders sit at cancelled, paid or pending while carrying a shipping
+timestamp. The column used to require a shipped/delivered status as well, which threw all 600
+away and made its own description ("null while unshipped") untrue. A shipping timestamp is what
+means an order shipped; `is_cancelled` is on the same row for anyone who wants cancellations out.
+
 **`loaded_at_field` cannot call a project macro.** It is rendered at parse time in a restricted
 context, so the freshness expression in `_webshop__sources.yml` is literal SQL.
 

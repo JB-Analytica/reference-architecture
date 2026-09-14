@@ -33,6 +33,10 @@ dev = [
     "ruff>=0.1.0",
     "ty>=0.0.4",
     "poethepoet>=0.38.0",
+    # tests/test_dbt_project.py reads dbt_project.yml and compares version pins. Both arrive
+    # transitively with dbt, but a test should not depend on another package's dependencies.
+    "pyyaml",
+    "packaging",
 ]
 
 [project.scripts]
