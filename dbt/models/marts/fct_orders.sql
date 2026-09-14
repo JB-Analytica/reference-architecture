@@ -22,8 +22,8 @@ final as (
         -- Display labels live in the mart for the same reason the money columns do: a page may
         -- group and sum what the mart defines, but it may not decide what a value is called.
         -- The raw enum stays alongside as the key to filter and join on.
-        {{ title_case('orders.order_status') }} as order_status_label,
-        {{ title_case('orders.sales_channel') }} as channel_label,
+        {{ sentence_case('orders.order_status') }} as order_status_label,
+        {{ sentence_case('orders.sales_channel') }} as channel_label,
         orders.shipping_city,
         orders.shipping_country,
         orders.shipped_at,

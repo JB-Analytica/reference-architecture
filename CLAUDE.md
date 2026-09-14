@@ -60,8 +60,10 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   declares the pairing in `_marts__models.yml` as `meta.display_label`. A chart or table names
   the label; filters and joins name the raw key. `tests/test_report.py` reads those pairings and
   fails if a page points `x=` or `id=` at a raw enum, so adding an enum protects it on the same
-  line that documents it. The `title_case` macro replaces underscores as well as capitalising --
-  without that, `mobile_app` renders as `Mobile_app`.
+  line that documents it. Labels are **sentence case**, matching the rest of the site's voice
+  ("Webshop performance", "Mobile app"): the `sentence_case` macro replaces underscores and
+  capitalises only the first word. Title-casing gave `Mobile App`, the one Title Case string on
+  the site; leaving underscores gave `Mobile_app`.
 - **The built `<head>` is finished by `refarch/seo.py`, after Evidence.** Per-page copy
   (`description`, `og.title`, `og.image`) is frontmatter and belongs with the page; absolute
   URLs, the site-wide og tags, the removal of Evidence's `@evidence_dev` `twitter:site` default,
@@ -110,12 +112,19 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   `dbt/dbt_project.yml`'s `require-dbt-version` (what is allowed to run the project, including a
   system dbt). Change both; a test fails if they stop accepting the same versions.
 - **Warehouse SQL is DuckDB SQL.** No `initcap`, no `timestamp_diff`, no `safe_divide`. Where
-  a dialect gap needs papering over, add a macro next to `cents_to_eur` and `title_case` rather
+  a dialect gap needs papering over, add a macro next to `cents_to_eur` and `sentence_case` rather
   than inlining the workaround.
 - **Money is integer cents in the source and euros in the marts.** Convert with the
   `cents_to_eur` macro at the mart boundary only. The macro parenthesises its argument; keep it
   that way. Without the parentheses `cents_to_eur('a - b')` expanded to `a - b / 100`, which
-  divided only the last term and silently inflated two mart columns by 100x and 500x.
+  divided only the last term and silently inflated two mart columns by 100x and 500x. The macro
+  returns **DECIMAL and never touches a float**: `sum()` over doubles is not associative, so a
+  total depends on the order rows are read in. One product total lands exactly on a half cent,
+  and adding an unrelated column to a mart changed the row order and moved the published figure
+  from 9,314 to 9,313 with no change to any money. `dbt/tests/assert_money_is_exact.sql` fails
+  the build if a mart `*_eur` column stops being decimal -- it checks the column type rather than
+  a value, because there is one boundary figure in this data today and a test that needs a
+  specific row to be unlucky is not a test.
 - **"Revenue" means realised revenue.** `fct_orders` and `fct_order_items` carry both
   `net_amount_eur` (the order as placed, cancellations included) and `realised_net_amount_eur`
   (zero when cancelled); `dim_customers.lifetime_realised_net_revenue_eur` is realised too. Sum

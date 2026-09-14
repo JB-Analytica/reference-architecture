@@ -7,11 +7,12 @@
     large while fct_orders was fine, and every per-row value still looked plausible. Only the
     comparison was absurd.
 
-    Tolerance is half a cent, and it is there to absorb float representation, not rounding
-    drift. Source money is integer cents, and an integer divided by 100 and rounded to two
-    decimals is exact, so summing rounded line values equals rounding the summed value. If this
-    tolerance ever has to be widened, that means money is being rounded at two different grains
-    -- which is a modelling problem to fix, not a number to raise. -#}
+    Tolerance is half a cent. It used to be there to absorb float representation; money is
+    DECIMAL now (see cents_to_eur), so these comparisons are exact and the tolerance absorbs
+    nothing. It is kept as the residue of the older, weaker guarantee -- tightening it to zero
+    would be correct today and would say nothing the type itself does not already enforce. If it
+    ever has to be *widened*, that means money is being rounded at two different grains, which is
+    a modelling problem to fix rather than a number to raise. -#}
 
 {% set tolerance = 0.005 %}
 
