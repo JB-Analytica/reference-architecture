@@ -1,5 +1,5 @@
 ---
-title: A data platform you can read
+title: A data platform you can read, trust and build on
 ---
 
 [JB Analytica](https://www.jbanalytica.com/) is a data architecture and analytics engineering
@@ -11,8 +11,9 @@ ingestion, warehouse, semantic layer, dashboards. The business it runs on is inv
 is generated, and there is no customer behind any number on this site.
 
 We built it because most consultancies ask you to take their standards on faith, and this is the
-alternative: you can open it, clone it and run it. The pages in the sidebar are the finished
-product; the interesting part is everything underneath them.
+alternative: you can open it, clone it and run it. Reading it is the point — it is what makes the
+rest checkable rather than claimed. The pages in the sidebar are the finished product; the
+interesting part is everything underneath them.
 
 ## The business it is built around
 
@@ -88,6 +89,14 @@ same source. Column-level tests
 pass happily on a model that is uniformly wrong; that is exactly how a rounding bug once survived
 review here, inflating a revenue column a hundredfold while every row still looked plausible.
 The test that now catches it is in the repository, and so is the account of how it got in.
+
+**It is a foundation, not a demo.** The layering is the part that survives contact with a real
+business. A new mart is added without touching a line of staging or ingestion. A new source
+table arrives, gets its own staging model, and nothing downstream notices. And the warehouse
+itself is one connection string: the two seams either side of ingestion mean this whole stack
+moves onto a production database and BigQuery or Snowflake without a single model being rewritten.
+Growth gets absorbed rather than triggering a rebuild, which is the difference between a platform
+and a prototype.
 
 **It runs with no account at all.** Clone it, run four commands, and the whole platform builds on
 a laptop — no cloud project, no credentials, no bill. That is not a demo trick. It is what lets
