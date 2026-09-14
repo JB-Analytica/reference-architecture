@@ -134,11 +134,21 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
 ## Working on this repo
 
 `main` is protected and the protection applies to admins too. Nothing reaches it except through a
-pull request whose `Lint, types, tests` and `Full run` checks have passed: no direct pushes, no
-force pushes, no deletions. Approvals are set to zero, so a solo maintainer can still merge their
-own pull request — requiring one would lock the only admin out, because GitHub does not let you
-approve your own. The Pages job (`publish`) is deliberately **not** a required check: it only runs
-on pushes to `main`, so requiring it would leave every pull request waiting for a check that never
+pull request whose `Lint, types, tests` and `Full run` checks have passed, with every review
+conversation resolved: no direct pushes, no force pushes, no deletions.
+
+**One approving review is required, and `jarichb` holds a bypass.** GitHub does not let you
+approve your own pull request, so without that bypass the only maintainer would be locked out of
+their own repository; with it, outside contributions still need a review. Merging your own pull
+request therefore means using the bypass — the merge button on github.com, or
+`gh pr merge --squash --admin`. Note that an agent session will usually be stopped from running
+that second form: it reads as merging without review, which is exactly what it is, and the tool
+cannot tell an owner using a bypass they configured from someone overriding a control. Merge it
+yourself rather than trying to route around that.
+
+Stale approvals are dismissed on a new push, so a review approves a specific commit rather than
+an intention. The Pages job (`publish`) is deliberately **not** a required check: it only runs on
+pushes to `main`, so requiring it would leave every pull request waiting for a check that never
 arrives.
 
 ## Gotchas
