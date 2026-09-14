@@ -41,17 +41,22 @@ jobs:
       - run: npm ci
         working-directory: evidence
 
+      # Ask Pages where this site will actually live, before building. On a project site that
+      # is /<repo>; on a custom domain it is the empty string, because the site sits at the
+      # domain root. Taking the value from here rather than hardcoding it means attaching or
+      # removing a custom domain needs no change to this file -- and a hardcoded prefix that
+      # outlived its URL would serve the whole report as unstyled HTML.
+      - uses: actions/configure-pages@v6
+        id: pages
+
       # The whole stack, from the DBML upwards -- the published report is built from the same
       # four stages a reader runs locally, not from a checked-in copy that could drift.
       #
-      # --base-path matters: a project site is served from /<repo>, not the domain root, so
-      # every asset URL has to be built with that prefix or the page loads as unstyled HTML.
-      # `refarch report` writes it into evidence.config.yaml for the build and takes it out
-      # again, because committing it would break opening build/index.html from the filesystem.
+      # `refarch report` writes the base path into evidence.config.yaml for the build and takes
+      # it out again; committing it would break the local preview. An empty value is a no-op.
       - name: Build the report for the Pages URL
-        run: uv run refarch run --target prod --base-path /${{ github.event.repository.name }}
+        run: uv run refarch run --target prod --base-path "${{ steps.pages.outputs.base_path }}"
 
-      - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: evidence/build

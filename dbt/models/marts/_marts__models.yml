@@ -61,11 +61,25 @@ models:
         description: Total discount granted on the order, in euros.
       - name: net_amount_eur
         description: >
-          Gross minus discounts, in euros. The revenue number the business uses. Cancelled
-          orders are included: this is the value of the order as placed, so anything summing
-          this column and calling the result realised revenue must filter on order_status
-          (or is_cancelled) itself.
+          Gross minus discounts, in euros, for the order **as placed** -- cancellations
+          included. This is booked revenue: what the customer asked for. Summing it answers
+          "how much did people order", not "how much did we earn".
         data_tests: [not_null]
+      - name: realised_net_amount_eur
+        description: >
+          The same money, but zero when the order was cancelled -- revenue that actually
+          happened. This is the column to sum for a revenue figure.
+
+          It is stored per row rather than left as a filter so that it stays additive: summing
+          it is correct at every grain, and a ratio built from it (cancellation rate, realised
+          share) re-derives correctly when rolled up from day to month. A stored ratio would
+          not, because you cannot average an average.
+        data_tests:
+          - not_null
+          # The pair must stay consistent with the cancellation flag, or the marts drift
+          # back to two meanings of "revenue". Pinned by the singular test in dbt/tests/
+          # rather than a package: two assertions do not justify a dependency in a repo
+          # whose whole point is that it installs with nothing.
       - name: is_cancelled
         description: True when the order was cancelled.
       - name: is_delivered
@@ -106,8 +120,16 @@ models:
       - name: unit_price_eur
         description: Price per unit at the time of ordering.
       - name: net_amount_eur
-        description: Line revenue after discount, in euros.
+        description: >
+          Line revenue after discount, in euros, for the order as placed -- cancellations
+          included. Booked, not realised; see realised_net_amount_eur.
         data_tests: [not_null]
+      - name: realised_net_amount_eur
+        description: >
+          Line revenue that actually happened: zero when the parent order was cancelled. The
+          column to sum for product revenue.
+        data_tests:
+          - not_null
 
   - name: dim_customers
     description: >
@@ -145,7 +167,7 @@ models:
       - name: lifetime_order_count
         description: Non-cancelled orders placed, all time.
         data_tests: [not_null]
-      - name: lifetime_net_revenue_eur
+      - name: lifetime_realised_net_revenue_eur
         description: Net revenue from this customer, all time, cancellations excluded.
         data_tests: [not_null]
       - name: has_ordered

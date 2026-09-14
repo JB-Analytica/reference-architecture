@@ -28,6 +28,10 @@ final as (
         {{ cents_to_eur('coalesce(order_money.gross_amount_cents, 0)') }} as gross_amount_eur,
         {{ cents_to_eur('coalesce(order_money.discount_cents, 0)') }} as discount_eur,
         {{ cents_to_eur('coalesce(order_money.net_amount_cents, 0)') }} as net_amount_eur,
+        {{ cents_to_eur(
+            "case when orders.order_status = 'cancelled' then 0
+                  else coalesce(order_money.net_amount_cents, 0) end"
+        ) }} as realised_net_amount_eur,
         orders.order_status = 'cancelled' as is_cancelled,
         orders.order_status = 'delivered' as is_delivered,
         case

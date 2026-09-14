@@ -6,6 +6,9 @@ with customers as (
 
 orders as (
 
+    -- Cancelled orders are excluded here on purpose: a customer's lifetime value is what they
+    -- actually bought. Every column derived from this CTE is therefore realised, which is what
+    -- the `realised` in its name is for -- see fct_orders for the booked/realised pair.
     select * from {{ ref('stg_webshop__orders') }}
     where order_status != 'cancelled'
 
@@ -24,7 +27,7 @@ customer_orders as (
         count(*) as order_count,
         min(orders.ordered_at) as first_order_at,
         max(orders.ordered_at) as last_order_at,
-        sum(order_money.net_amount_cents) as lifetime_net_amount_cents
+        sum(order_money.net_amount_cents) as lifetime_realised_net_amount_cents
     from orders
     inner join order_money on orders.order_id = order_money.order_id
     group by orders.customer_id
@@ -46,8 +49,8 @@ final as (
         customer_orders.first_order_at,
         customer_orders.last_order_at,
         coalesce(customer_orders.order_count, 0) as lifetime_order_count,
-        {{ cents_to_eur('coalesce(customer_orders.lifetime_net_amount_cents, 0)') }}
-            as lifetime_net_revenue_eur,
+        {{ cents_to_eur('coalesce(customer_orders.lifetime_realised_net_amount_cents, 0)') }}
+            as lifetime_realised_net_revenue_eur,
         customer_orders.order_count is not null as has_ordered
     from customers
     left join customer_orders on customers.customer_id = customer_orders.customer_id

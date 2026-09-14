@@ -53,6 +53,20 @@ regeneration that changes data you did not expect to change is a signal, not noi
 
 ## Things that have already cost time
 
+**`cents_to_eur` needs its parentheses.** The macro expands to `round(({{ column }}) / 100, 2)`.
+An earlier version omitted the inner parentheses, so a compound argument got operator precedence
+instead of a conversion: `cents_to_eur('a - b')` became `a - b / 100`. Single columns and
+products were unaffected, which is why it survived -- `a * b / 100` is still correct. It was
+`fct_order_items.net_amount_eur` (100x too high) and `dim_products.unit_margin_eur` (500x) that
+were wrong, and nothing failed: the numbers were plausible per row and absurd only in aggregate,
+where one coffee SKU out-earned the entire business. The test in `dbt/tests/` now catches it by
+cross-checking two columns that must agree.
+
+**Booked and realised revenue are different columns, on purpose.** `net_amount_eur` is the order
+as placed; `realised_net_amount_eur` is zero when the order was cancelled. Sum the realised one
+for revenue. Before they were split, `fct_orders` counted cancelled orders as revenue while
+`dim_customers` quietly excluded them -- the same word, two numbers, five percent apart.
+
 **A failed dlt load leaves a pending package.** Until it is retried or dropped, the next run
 ignores new data. `refarch load` says so on failure; `dlt pipeline webshop info` shows the
 package.

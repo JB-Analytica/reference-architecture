@@ -7,8 +7,8 @@ select
     p.product_name,
     p.coffee_origin,
     p.roast_level,
-    sum(i.net_amount_eur) as net_revenue_eur,
-    sum(i.quantity)       as units
+    sum(i.realised_net_amount_eur) as net_revenue_eur,
+    sum(i.quantity) filter (where i.order_status != 'cancelled') as units
 from refarch.order_items i
 join refarch.products p on i.product_id = p.product_id
 group by 1, 2, 3
