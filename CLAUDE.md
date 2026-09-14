@@ -49,10 +49,12 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   of the exported SVG, because Evidence can only serve files from `static/`; re-copy it whenever
   the diagram changes, or the test in `tests/test_cli.py` fails.
 - **The report's home page is positioning, not a dashboard.** `evidence/pages/index.md`
-  introduces JB Analytica, the (fictional) client and the problem; the dashboard that used to
-  live there is `performance.md`. Anything said there about JB Analytica must trace to
-  jbanalytica.com, the same rule the brand colours follow — never invent a claim about the
-  business. Page order is set by `sidebar_position` frontmatter, not by filename.
+  introduces JB Analytica, the invented business the project is built around, and the problem it
+  reproduces; the dashboard that used to live there is `performance.md`. Two rules for that page:
+  anything said about JB Analytica must trace to jbanalytica.com, the same rule the brand colours
+  follow, and nothing may read as a client engagement or a case study — this is a reference
+  project, the webshop does not exist, and the page says both in its opening lines. Page order is
+  set by `sidebar_position` frontmatter, not by filename.
 - **The report explains itself on `evidence/pages/architecture.md`**, for readers who see the
   published site and never the repo. It has to stay in step with `docs/architecture/README.md`,
   which is the source of the two.

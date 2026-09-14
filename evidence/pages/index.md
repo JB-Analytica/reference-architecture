@@ -3,21 +3,28 @@ title: A data platform you can read
 ---
 
 [JB Analytica](https://www.jbanalytica.com/) is a data architecture and analytics engineering
-consultancy based in Belgium, working across the Benelux. This is a complete platform we built
-end to end — source system, ingestion, warehouse, semantic layer, dashboards — and published
-with every line of its source.
+consultancy based in Belgium, working across the Benelux.
 
-Most consultancies ask you to take their standards on faith. This one you can open, clone and
-run. The pages in the sidebar are the finished product; the interesting part is everything
-underneath them.
+This is a **reference project** — not a client engagement. It is a complete data platform, built
+end to end as a worked example and published with every line of its source: source system,
+ingestion, warehouse, semantic layer, dashboards. The business it runs on is invented, the data
+is generated, and there is no customer behind any number on this site.
 
-## The client we built it for
+We built it because most consultancies ask you to take their standards on faith, and this is the
+alternative: you can open it, clone it and run it. The pages in the sidebar are the finished
+product; the interesting part is everything underneath them.
 
-A specialty-coffee webshop in Belgium, selling beans, ground coffee, capsules and equipment
-direct to consumers through four channels — its own site, its mobile app, a marketplace, and a
-physical store. The business is fictional, and deliberately so: the data is generated, and
-nothing here is a real customer's numbers dressed up as a case study. The *shape* is what
-matters, and it is the shape we keep meeting.
+## The business it is built around
+
+An invented one: a specialty-coffee webshop in Belgium, selling beans, ground coffee, capsules
+and equipment direct to consumers through four channels — its own site, its mobile app, a
+marketplace, and a physical store.
+
+Inventing it was the point. A real engagement's data cannot be published, so a case study built
+on one is a story you have to believe. This is the opposite: the business is made up, and
+therefore every number, every model and every test behind it can be shown. What is *not* made up
+is the shape — the size, the channel mix, the seasonality and the mess — because a platform that
+only works on convenient data demonstrates nothing.
 
 ```sql shape
 select
@@ -42,17 +49,17 @@ question about last quarter is answered by exporting a CSV and rebuilding the sa
 hand — which is the point at which two people produce two different revenue figures and both are
 defensible.
 
-## The problem underneath the problem
+## The problem it reproduces
 
-This webshop has the failure we are most often called about: **the numbers do not agree, and the
-dashboards are not the reason.**
+The scenario is built around the failure we are most often called about: **the numbers do not
+agree, and the dashboards are not the reason.**
 
 Ask what revenue was and it depends who you ask, because <Value data={shape} column=cancellation_rate fmt=pct1 /> of orders get cancelled and nothing says whether a cancelled order counts. One report includes them, another quietly excludes them, and the gap is real money — <Value data={shape} column=revenue_eur fmt=eur0 /> of revenue that actually happened, against <Value data={shape} column=booked_eur fmt=eur0 /> of orders as placed. Nobody wrote a bug. Two people made two reasonable choices, a year apart, in two different files.
 
 That is not fixable in a BI tool, because a BI tool is where the disagreement surfaces, not where
 it lives. It is fixable one layer down, by defining the number once.
 
-## What we built
+## How it is built
 
 Four stages, run by four commands, from a data model to a published report:
 
@@ -88,9 +95,9 @@ an architecture be reviewed and argued with before anyone commits to buying it.
 
 ## Where to look next
 
-- [Webshop performance](/performance) — revenue, orders, fulfilment: the report the business asked for
+- [Webshop performance](/performance) — revenue, orders, fulfilment: the report a business like this needs
 - [Products](/products) and [Customers](/customers) — the same definitions, at two other grains
-- [Cancellations](/cancellations) — the question that started all this, answered once
+- [Cancellations](/cancellations) — the question the whole example turns on, answered once
 - [Architecture](/architecture) — how it is built, and where this data is thinner than it looks
 - [The source, on GitHub](https://github.com/JB-Analytica/reference-architecture) — all of it, MIT licensed
 
