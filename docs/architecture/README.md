@@ -85,6 +85,13 @@ The two have to agree; this one is the source.
 boundary it always was: staging and intermediate models stay in the warehouse for lineage and
 debugging and are never the layer the report or an analyst is pointed at.
 
+Nothing about dbt or Evidence makes that boundary hold -- a source query naming
+`refarch_staging.stg_webshop__orders` would have worked perfectly well, and moved a column
+definition out of the layer that is supposed to own it. `tests/test_dbt_project.py` closes it:
+it reads `dbt_project.yml` and the source queries directly (no manifest, no warehouse) and fails
+if the `bi` tag moves, if a source query reads a non-mart, or if one so much as mentions an
+upstream model by name.
+
 ## Money
 
 The source stores money in integer cents, which is right for an operational database and wrong

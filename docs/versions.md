@@ -53,8 +53,17 @@ the numbers above. The node count is deliberately stated in only two places — 
 README's "What success looks like" — because it was previously in four and had drifted in all
 of them.
 
+The constraint is written twice on purpose. `pyproject.toml` decides what the virtualenv
+installs; `dbt/dbt_project.yml`'s `require-dbt-version` decides what is allowed to run the
+project at all, including a system `dbt` that never went through uv — which would otherwise
+build these models on an untested version and say nothing. `tests/test_dbt_project.py` fails if
+the two ever stop accepting the same versions. Note that `<2.0.0` still admits `2.0.0rc2`,
+because a release candidate sorts below its own release; that is what keeps the trial above
+runnable.
+
 When dbt-core 2.0 is released and a `dbt-duckdb` that is tested against it follows, the change
-is to raise the two floors in `pyproject.toml`, re-lock, and re-run the trial above. Nothing in
+is to raise the floors in `pyproject.toml` **and** `dbt/dbt_project.yml`, re-lock, and re-run
+the trial above. Nothing in
 the models or the semantic layer is expected to need edits.
 
 ## Fonts

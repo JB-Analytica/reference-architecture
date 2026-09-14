@@ -3,6 +3,17 @@ version: "1.0.0"
 config-version: 2
 profile: refarch
 
+# The same constraint pyproject.toml puts on dbt-core, stated where dbt itself will enforce it:
+# `uv run dbt ...` or a system dbt that bypasses this project's virtualenv now fails with a
+# version error instead of running the models against something untested. dbt-core 2.0 is
+# excluded on purpose -- see docs/versions.md. Keep the two in step; tests/test_dbt_project.py
+# fails if they drift.
+#
+# `<2.0.0` still admits `2.0.0rc2`, because a release candidate sorts below the release it is a
+# candidate for. That is deliberate rather than an oversight: it is what lets the trial command
+# in docs/versions.md keep working, while the final 2.0.0 stays out until someone raises this.
+require-dbt-version: [">=1.12.4", "<2.0.0"]
+
 model-paths: ["models"]
 macro-paths: ["macros"]
 test-paths: ["tests"]

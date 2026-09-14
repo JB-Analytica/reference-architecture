@@ -85,7 +85,12 @@ models:
       - name: is_delivered
         description: True when the order was delivered.
       - name: days_to_ship
-        description: Days between ordering and shipping; null while unshipped.
+        description: >
+          Days between `ordered_at` and `shipped_at`, null when the order has no shipping
+          timestamp. Measured in whole hours and divided by 24, so it is exact to the hour
+          rather than to the day. It follows `shipped_at` alone and not `order_status`: the two
+          are independent in this source, and a cancelled order that already shipped still took
+          a real number of days to ship. Filter on `is_cancelled` if you want those excluded.
 
   - name: fct_order_items
     description: >

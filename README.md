@@ -36,7 +36,9 @@ reviewed in a pull request, and read by Evidence without being redefined — see
 
 **Only the marts are exposed.** Every mart carries the `bi` tag from `dbt_project.yml`, so
 staging and intermediate models stay available for lineage and debugging but are never the
-thing a BI tool or an analyst points at.
+thing a BI tool or an analyst points at. That used to be a convention a reviewer had to notice;
+`tests/test_dbt_project.py` now fails if the tag moves off the marts folder, or if an Evidence
+source query reads anything but a mart.
 
 **Data that behaves like a business.** Uniformly random test data hides the bugs that matter: it
 will never show you a dashboard that breaks in December, or the query that falls over on your
