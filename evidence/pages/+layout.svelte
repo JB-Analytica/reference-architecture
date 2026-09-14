@@ -7,13 +7,14 @@
 	// import is deliberately absent: Poppins and JetBrains Mono are declared in app.css, and
 	// loading two more families on a public site for nothing is waste.
 	import '../app.css';
+	import { base } from '$app/paths';
 	import { EvidenceDefaultLayout } from '@evidence-dev/core-components';
 	export let data;
 </script>
 
 <EvidenceDefaultLayout
 	{data}
-	logo="/jba-logo.png"
+	logo="{base}/jba-logo.png"
 	githubRepo="https://github.com/JB-Analytica/reference-architecture"
 >
 	<slot slot="content" />

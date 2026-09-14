@@ -56,3 +56,32 @@ def test_evidence_filename_is_relative_to_the_source_folder(monkeypatch, tmp_pat
     assert not os.path.isabs(filename)
     resolved = (EVIDENCE_SOURCE_DIR / filename).resolve()
     assert resolved == (tmp_path / "elsewhere" / "refarch.duckdb").resolve()
+
+
+def test_base_path_is_restored_even_when_the_build_fails() -> None:
+    """The base path is written into a checked-in file, so it must always come back out.
+
+    evidence.config.yaml carries the comments explaining the brand colour choices. If a failed
+    build left the deployment block behind, the next local build would produce a report whose
+    assets only resolve under /reference-architecture -- and a stray diff would land in review.
+    """
+    import pytest
+
+    from refarch.cli import _base_path
+    from refarch.config import EVIDENCE_CONFIG
+
+    before = EVIDENCE_CONFIG.read_text()
+    with pytest.raises(RuntimeError), _base_path("/reference-architecture"):
+        assert "basePath: /reference-architecture" in EVIDENCE_CONFIG.read_text()
+        raise RuntimeError("build blew up")
+    assert EVIDENCE_CONFIG.read_text() == before
+
+
+def test_no_base_path_leaves_the_config_untouched() -> None:
+    from refarch.cli import _base_path
+    from refarch.config import EVIDENCE_CONFIG
+
+    before = EVIDENCE_CONFIG.read_text()
+    with _base_path(None):
+        assert EVIDENCE_CONFIG.read_text() == before
+    assert EVIDENCE_CONFIG.read_text() == before

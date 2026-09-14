@@ -91,7 +91,8 @@ test — all passing, against roughly 4,000 orders and around €346,600 in net 
 visibly month over month. Re-running the load adds no duplicate rows, because every table merges
 on its primary key. Open the warehouse with `duckdb warehouse/refarch.duckdb`, then
 `show all tables` — the file holds the raw layer and every dbt schema together. Open the report
-at `evidence/build/index.html` — no server needed, it is a self-contained static site.
+at https://jb-analytica.github.io/reference-architecture/, or build it and serve it locally
+with `npm run preview` from `evidence/`.
 
 ## The report
 
@@ -144,6 +145,22 @@ the header. What is not themed is Evidence's layout chrome — the sidebar, the 
 table and chart furniture are Evidence's, and the brand sits on top of them rather than replacing
 them.
 
+### Published
+
+The report is published to GitHub Pages on every push to `main`:
+
+**https://jb-analytica.github.io/reference-architecture/**
+
+`.github/workflows/pages.yml` runs all four stages and deploys `evidence/build`, so what is
+live is built from the DBML upwards by the same commands a reader runs locally — there is no
+checked-in copy of the report to drift out of date.
+
+A project site is served from `/<repo>` rather than the domain root, so the build needs
+`--base-path`. That value is deliberately not committed: `refarch report --base-path /x` writes
+it into `evidence.config.yaml` for the build and takes it out again, because a committed base
+path would make every asset URL absolute under `/x` and break the local preview. Pull requests
+do not publish; they get the report as a downloadable artifact from `ci.yml` instead.
+
 ## Working on it
 
 ```bash
@@ -190,7 +207,7 @@ One GitHub Actions workflow, `ci.yml`, with two jobs. `checks` runs lint, types 
 every push and pull request. `pipeline` sets up Node 20, installs Evidence's dependencies, then
 runs the full stack — generate, load, transform, report, source freshness — on every pull
 request too, and uploads two artifacts: `warehouse` (the DuckDB file) and `report` (the built
-static site — unzip it and open `index.html`, no server needed). That is only possible because
+static site — unzip it and serve the folder). That is only possible because
 the warehouse is a file: there is no account to hold a secret for, so the job runs the same way
 on a fork as it does here.
 

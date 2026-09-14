@@ -47,7 +47,9 @@ jobs:
       - name: Source freshness
         run: uv run refarch transform source freshness --target prod
       # Two artefacts worth having: the warehouse, which `duckdb refarch.duckdb` opens, and
-      # the report, which is a static site -- unzip it and open index.html, no server needed.
+      # the report, which is a static site -- unzip it and serve the folder with any static
+      # file server. It needs no backend, but it does need a web root: the asset URLs are
+      # absolute from the site root, so opening index.html over file:// renders it unstyled.
       - uses: actions/upload-artifact@v5
         if: always()
         with:

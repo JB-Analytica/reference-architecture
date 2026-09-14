@@ -16,7 +16,7 @@ warehouse/refarch.duckdb  raw_webshop.*   ← landed exactly as the source had i
 warehouse/refarch.duckdb  refarch_staging / _intermediate / _marts   ← same file, different schemas
         │  Evidence: reads the marts, builds a static site
         ▼
-evidence/build/   ← HTML + parquet, open index.html, no server needed
+evidence/build/   ← HTML + parquet; serve it, no backend needed
 ```
 
 Both the raw layer and every dbt layer live in the one DuckDB file — dlt and dbt just write

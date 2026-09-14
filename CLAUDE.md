@@ -74,6 +74,14 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   `directory` it is given, so the warehouse can only be named relative to
   `evidence/sources/refarch/`. `refarch report` computes that relative path; do not "simplify" it
   to an absolute one.
+- **The published report is a project site, so it lives under `/reference-architecture`.** Any
+  asset referenced from a page or from `app.css` must go through SvelteKit's `base` (or a
+  relative url() Vite can rewrite) — a root-absolute path works locally and 404s in production.
+  `refarch report --base-path` writes the value in for the build and takes it out again; never
+  commit it.
+- **The built report needs a web root, not `file://`.** Its asset URLs are absolute from the
+  site root. Serve it with `npm run preview`; opening `build/index.html` directly renders it
+  unstyled.
 - **`npm audit` reports criticals that cannot be fixed here** and do not reach the built site —
   see `docs/versions.md` before acting on them. CI does not gate on it, deliberately.
 - dbt-core is pinned `<2` on purpose — see `docs/versions.md` before raising it.

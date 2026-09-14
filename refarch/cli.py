@@ -6,12 +6,21 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import typer
 
 from refarch import generate as generate_stage
-from refarch.config import DBT_DIR, EVIDENCE_DIR, EVIDENCE_SOURCE_DIR, ROOT, settings
+from refarch.config import (
+    DBT_DIR,
+    EVIDENCE_CONFIG,
+    EVIDENCE_DIR,
+    EVIDENCE_SOURCE_DIR,
+    ROOT,
+    settings,
+)
 
 app = typer.Typer(
     help="model2data -> dlt -> DuckDB -> dbt -> Evidence, stage by stage.",
@@ -130,25 +139,63 @@ def _require_npm() -> str:
     return npm
 
 
+@contextmanager
+def _base_path(base_path: str | None) -> Iterator[None]:
+    """Temporarily give Evidence a deployment base path.
+
+    Evidence reads `deployment.basePath` from evidence.config.yaml and offers no environment
+    override, but the value cannot simply be committed: a base path makes every asset URL
+    absolute under it, which breaks opening build/index.html from the filesystem. So it is
+    written for the duration of the build and taken out again afterwards.
+
+    The original text is restored byte for byte rather than re-serialised, because
+    evidence.config.yaml carries the comments explaining the brand colour choices and a YAML
+    round-trip would drop every one of them.
+    """
+    if not base_path:
+        yield
+        return
+    original = EVIDENCE_CONFIG.read_text()
+    EVIDENCE_CONFIG.write_text(f"{original.rstrip()}\n\ndeployment:\n  basePath: {base_path}\n")
+    try:
+        yield
+    finally:
+        EVIDENCE_CONFIG.write_text(original)
+
+
 @app.command()
 def report(
     dev: bool = typer.Option(
         False, help="Serve with hot reload instead of building the static site."
     ),
+    base_path: str | None = typer.Option(
+        None,
+        help="Build for a site served under this path, e.g. /reference-architecture for "
+        "GitHub Pages. Must start with '/'.",
+    ),
 ) -> None:
     """Stage 4 -- build the Evidence report over the warehouse (static site in evidence/build)."""
+    if base_path and not base_path.startswith("/"):
+        typer.secho(
+            f"--base-path must start with '/' (got {base_path!r}). Evidence rejects it otherwise.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
     npm = _require_npm()
     env = _evidence_env()
-    # `sources` re-reads the warehouse and rewrites the parquet the report queries. Always run
-    # it first, or the report silently renders the previous run's numbers.
-    _run([npm, "run", "sources"], cwd=EVIDENCE_DIR, env=env)
-    if dev:
-        _run([npm, "run", "dev"], cwd=EVIDENCE_DIR, env=env)
-        return
-    _run([npm, "run", "build"], cwd=EVIDENCE_DIR, env=env)
+    with _base_path(base_path):
+        # `sources` re-reads the warehouse and rewrites the parquet the report queries. Always
+        # run it first, or the report silently renders the previous run's numbers.
+        _run([npm, "run", "sources"], cwd=EVIDENCE_DIR, env=env)
+        if dev:
+            _run([npm, "run", "dev"], cwd=EVIDENCE_DIR, env=env)
+            return
+        _run([npm, "run", "build"], cwd=EVIDENCE_DIR, env=env)
     typer.secho(
-        f"Report built. Open {EVIDENCE_DIR / 'build' / 'index.html'}, or serve it with "
-        "`npm run preview` from evidence/.",
+        f"Report built into {EVIDENCE_DIR / 'build'}. Serve it with `npm run preview` from "
+        "evidence/ -- its asset URLs are absolute from the site root, so opening index.html "
+        "over file:// renders it unstyled.",
         fg=typer.colors.GREEN,
     )
 
@@ -158,6 +205,7 @@ def run(
     target: str = typer.Option("prod", help="dbt target for the transform stage."),
     skip_generate: bool = typer.Option(False, help="Reuse the existing generated source system."),
     skip_report: bool = typer.Option(False, help="Stop after dbt; do not build the report."),
+    base_path: str | None = typer.Option(None, help="Passed through to `refarch report`."),
 ) -> None:
     """Run every stage in order: generate -> load -> transform -> report."""
     if not skip_generate:
@@ -165,7 +213,7 @@ def run(
     load()
     _run(["dbt", "build"], cwd=DBT_DIR, env=_dbt_env(target))
     if not skip_report:
-        report(dev=False)
+        report(dev=False, base_path=base_path)
     typer.secho(
         f"Full run complete. The warehouse is {settings().warehouse_path}.",
         fg=typer.colors.GREEN,
