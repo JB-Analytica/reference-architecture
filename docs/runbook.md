@@ -62,6 +62,13 @@ were wrong, and nothing failed: the numbers were plausible per row and absurd on
 where one coffee SKU out-earned the entire business. The test in `dbt/tests/` now catches it by
 cross-checking two columns that must agree.
 
+**A model can be uniformly wrong and pass every column test.** `not_null`, `unique` and
+`accepted_values` all held while `fct_order_items.net_amount_eur` was a hundred times too large:
+each row was individually plausible. What catches that class of bug is comparing two numbers
+computed independently by different models, which is what
+`dbt/tests/assert_marts_reconcile.sql` does. It has been verified by reintroducing the old macro
+and watching it fail -- a regression test nobody has seen fail is not yet a test.
+
 **Booked and realised revenue are different columns, on purpose.** `net_amount_eur` is the order
 as placed; `realised_net_amount_eur` is zero when the order was cancelled. Sum the realised one
 for revenue. Before they were split, `fct_orders` counted cancelled orders as revenue while

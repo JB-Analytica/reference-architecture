@@ -64,6 +64,12 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   the realised column for any revenue figure. Do not add a third money column without deciding
   which of the two it is, and do not store a ratio per row -- ratios must re-derive from
   additive parts or they break on roll-up. `dbt/tests/` pins the pair against the flag.
+- **Marts must reconcile with each other.** `dbt/tests/assert_marts_reconcile.sql` compares
+  numbers two different models compute independently from the same cents: an order against the
+  sum of its lines, a customer's lifetime against their realised orders. Column-level tests pass
+  happily on a model that is uniformly wrong -- that is exactly how the `cents_to_eur` bug
+  survived review. Add a cross-model check whenever a new mart derives money that another mart
+  also derives.
 - **Layering and naming follow the staging / intermediate / marts convention** described in
   `docs/architecture/README.md`. Read that before adding a model.
 
