@@ -56,15 +56,24 @@ def test_every_route_is_finalised(build: Path) -> None:
     assert sorted(seo.finalise(build)) == ["/", "/architecture/", "/customers/"]
 
 
-def test_evidences_twitter_attribution_is_removed(build: Path) -> None:
-    """Evidence hardcodes `@evidence_dev`, and JB Analytica has no X account to put there.
+def test_shares_are_attributed_to_jb_analytica(build: Path) -> None:
+    """Evidence hardcodes `@evidence_dev`, so every share credited the framework's account.
 
-    Left alone, every share of this site credits the framework's account. jbanalytica.com sets
-    the other twitter tags and deliberately omits this one, so the tag goes rather than changes.
+    The tag is stripped and ours added, rather than edited in place: if Evidence ever stops
+    emitting it, the right handle still ships instead of none at all.
     """
     seo.finalise(build)
     for route in ("/", "/customers/"):
-        assert "twitter:site" not in _head(build, route)
+        head = _head(build, route)
+        assert "@evidence_dev" not in head
+        assert _tag_value(head, "twitter:site") == seo.TWITTER_SITE
+        assert _tag_value(head, "twitter:creator") == seo.TWITTER_SITE
+
+
+def test_only_one_twitter_site_tag_survives(build: Path) -> None:
+    """Two would leave which account gets the credit up to the scraper."""
+    seo.finalise(build)
+    assert _head(build, "/customers/").count('name="twitter:site"') == 1
 
 
 def _tag_value(head: str, tag: str) -> str | None:

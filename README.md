@@ -210,9 +210,9 @@ there. Frontmatter covers the per-page copy -- `description` and `og.title` on e
   `pages.yml` passes what `actions/configure-pages` reports rather than hardcoding a domain.
 - **Site-wide tags.** `og:site_name`, `og:type`, `og:locale` and the image alt text, which would
   otherwise be repeated in six frontmatter blocks.
-- **`twitter:site`.** Evidence hardcodes `@evidence_dev` with no config for it, so every share of
-  this site was attributed to the framework. JB Analytica has no X account -- jbanalytica.com
-  sets the other twitter tags and deliberately omits this one -- so the tag is removed.
+- **`twitter:site`.** Evidence hardcodes `@evidence_dev` with no config for it, so every share
+  of this site was attributed to the framework. Its tag is stripped and
+  [`@JBAnalytica`](https://x.com/JBAnalytica) written in its place, along with `twitter:creator`.
 - **`robots.txt` and `sitemap.xml`,** which both 404'd until this step existed.
 
 Rewriting built HTML is a real cost: it runs after the framework and has to be kept in step with

@@ -10,9 +10,9 @@ this module does after `evidence build` has run:
 * **Site-wide constants.** `og:site_name`, `og:type`, `og:locale` and the image alt text are the
   same on all six pages, so they do not belong in six frontmatter blocks.
 * **`twitter:site`.** Evidence hardcodes `@evidence_dev` in its preprocessor, with no config for
-  it, so every share of this site was attributed to the framework's account. JB Analytica has no
-  X account -- jbanalytica.com deliberately sets the other twitter tags and omits this one -- so
-  the tag is removed rather than replaced.
+  it, so every share of this site was attributed to the framework's account. Its tag is stripped
+  and JB Analytica's own handle written in its place. The replacement is added rather than
+  edited in, so that if Evidence ever stops emitting the tag the right one still ships.
 
 Rewriting built HTML is not free of cost: it runs after the framework and has to be kept in step
 with it. It is done here rather than by patching `@evidence-dev/preprocess` in node_modules,
@@ -28,6 +28,7 @@ from pathlib import Path
 
 SITE_URL = "https://reference.jbanalytica.com"
 SITE_NAME = "JB Analytica"
+TWITTER_SITE = "@JBAnalytica"  # https://x.com/JBAnalytica
 LOCALE = "en_GB"
 
 # Appended to every page title except the home page, whose own title is already a full sentence.
@@ -70,6 +71,8 @@ def _head_additions(url: str, image_url: str) -> str:
             '<meta property="og:image:height" content="630">',
             f'<meta property="og:image:alt" content="{OG_IMAGE_ALT}">',
             f'<meta name="twitter:image:alt" content="{OG_IMAGE_ALT}">',
+            f'<meta name="twitter:site" content="{TWITTER_SITE}">',
+            f'<meta name="twitter:creator" content="{TWITTER_SITE}">',
         )
     )
 
@@ -98,6 +101,7 @@ def finalise(build_dir: Path, site_url: str = SITE_URL, base_path: str | None = 
         if not sep:
             raise ValueError(f"{page} has no </head>; the Evidence build output changed shape.")
 
+        # Evidence's own @evidence_dev tag goes; ours is added below, in _head_additions.
         head = _TWITTER_SITE.sub("", head)
         head = _IMAGE_META.sub(lambda m: f"{m.group(1)}{origin}{m.group(2)}{m.group(3)}", head)
         if route != "/":

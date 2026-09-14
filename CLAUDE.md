@@ -68,7 +68,8 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   `robots.txt` and `sitemap.xml` are all done post-build, because Evidence has no configuration
   for any of them. Do not fix this by patching `@evidence-dev/preprocess` in `node_modules`:
   it is not committed, and `npm ci` silently drops the patch while the build keeps succeeding.
-  JB Analytica has no X account -- do not invent a `twitter:site` handle.
+  Evidence's `twitter:site` is stripped and `@JBAnalytica` added in `_head_additions` rather than
+  edited in place, so the right handle still ships if Evidence stops emitting the tag.
 - **Every page carries the provenance line and the footer** from `evidence/pages/+layout.svelte`.
   A reader arriving on one deep page from a shared link must be able to see whose site it is,
   that the data is invented, and how to make contact, without navigating. Do not move either
