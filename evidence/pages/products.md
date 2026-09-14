@@ -1,5 +1,6 @@
 ---
 title: Products
+sidebar_position: 2
 ---
 
 ```sql top_products

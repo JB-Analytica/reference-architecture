@@ -1,5 +1,6 @@
 ---
 title: Customers
+sidebar_position: 3
 ---
 
 `lifetime_order_count` and `lifetime_realised_net_revenue_eur` are columns on the `dim_customers` mart,
