@@ -6,7 +6,8 @@
   "scripts": {
     "sources": "evidence sources",
     "dev": "evidence dev",
-    "build": "evidence build"
+    "build": "evidence build",
+    "preview": "evidence preview"
   },
   "devDependencies": {
     "@evidence-dev/core-components": "^5.4.2",

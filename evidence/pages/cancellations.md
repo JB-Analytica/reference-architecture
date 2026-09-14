@@ -59,10 +59,12 @@ order by 1
     subtitle="Booked minus realised, on orders placed that month"
 />
 
-The rate is roughly flat while the lost amount tracks the revenue trend — cancellations scale
-with volume here rather than clustering in a bad month. That is a property of how the synthetic
-data is generated, and it is worth knowing: real data rarely looks this even, so a dashboard
-built only against this stack has not been tested on a spike.
+The rate wanders between about 3% and 6.5% with no trend, while the lost amount tracks total
+revenue — cancellations scale with volume here rather than clustering in a bad month. Both are
+properties of how the synthetic data is generated: cancellation is drawn independently per
+order, so the month-to-month movement is sampling noise on roughly 330 orders a month, not a
+signal. Worth knowing before trusting a dashboard built only against this stack — nothing here
+has been tested against a real spike.
 
 ## Where they happen
 

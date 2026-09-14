@@ -44,6 +44,14 @@ is the only description of the source system; the note hints on columns (`weight
 cancellation rate around 5%, a minority of customers placing most orders, no order shipped
 before it was placed.
 
+Two things the generator cannot express are worth stating rather than discovering. It spreads
+child rows over parents without guaranteeing every parent gets one, so about one order in nine
+has no line items — real rows worth €0 that pull the average order value down by roughly a
+tenth. And it draws each column independently, so an order's `status` and its `shipped_at` are
+uncorrelated: some cancelled and some still-pending orders carry a shipping timestamp. Neither
+is a bug in this repo and neither can be fixed from the DBML; both are the reason a stack that
+only ever ran against this data has not really been tested.
+
 **Extraction (`refarch/pipelines/webshop.py`).** dlt's generic `sql_database` source. Every
 table merges on `id`, so re-running never duplicates a row; mutable tables page on `updated_at`
 and the append-only `order_items` pages on its key. dlt's `_dlt_load_id` is enabled explicitly
@@ -67,6 +75,10 @@ the two ratios on the index page — are now written directly in each Evidence p
 still in git and still reviewed in the same pull request as everything else, but there is no
 longer a single declarative place a metric is defined once and reused everywhere; a second page
 that wants net revenue writes its own `sum(net_amount_eur)`.
+
+The report says a short version of all this to its own readers, on its `architecture` page
+(`evidence/pages/architecture.md`) — someone who opens the published site never sees this file.
+The two have to agree; this one is the source.
 
 **Exposure control.** `dbt_project.yml` tags every mart `bi`. Evidence's four source queries
 (`evidence/sources/refarch/*.sql`) each select from exactly one mart, so that tag is the same

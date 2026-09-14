@@ -85,3 +85,20 @@ def test_no_base_path_leaves_the_config_untouched() -> None:
     with _base_path(None):
         assert EVIDENCE_CONFIG.read_text() == before
     assert EVIDENCE_CONFIG.read_text() == before
+
+
+def test_report_diagram_is_the_exported_one() -> None:
+    """The report serves the same diagram the docs do.
+
+    `docs/architecture/diagram.svg` is an export of `diagram.html`; Evidence can only serve
+    files out of `evidence/static`, so the report needs its own copy. Two copies of a drawing
+    is exactly how a report ends up showing an architecture the repo no longer has, so pin
+    them together: re-export the diagram and copy it across, or this fails.
+    """
+    from refarch.config import EVIDENCE_DIR, ROOT
+
+    source = ROOT / "docs" / "architecture" / "diagram.svg"
+    served = EVIDENCE_DIR / "static" / "architecture.svg"
+    assert served.read_bytes() == source.read_bytes(), (
+        "evidence/static/architecture.svg is stale -- copy docs/architecture/diagram.svg over it"
+    )

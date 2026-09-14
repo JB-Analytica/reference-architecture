@@ -1,7 +1,7 @@
 // The operational database of a fictional Belgian specialty-coffee webshop.
 //
 // This file is the *only* description of the source system. model2data turns it into
-// relationship-preserving synthetic data; nothing downstream (dlt, dbt, Lightdash) knows or
+// relationship-preserving synthetic data; nothing downstream (dlt, dbt, Evidence) knows or
 // cares that the data is synthetic. Replace the generated DuckDB file with a real database
 // connection and the rest of the stack is unchanged.
 //

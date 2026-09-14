@@ -27,7 +27,7 @@ items as (
         cast(order_item_id as varchar) as row_key,
         net_amount_eur,
         realised_net_amount_eur,
-        order_status = 'cancelled' as is_cancelled
+        is_cancelled
     from {{ ref('fct_order_items') }}
 
 ),

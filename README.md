@@ -81,9 +81,9 @@ not have Node installed.
 
 ### What success looks like
 
-A finished run builds 64 dbt nodes — 4 table models, 5 view models, 54 data tests and 1 unit
-test — all passing, against roughly 4,000 orders and around €346,600 in net revenue that grows
-visibly month over month. Re-running the load adds no duplicate rows, because every table merges
+A finished run builds 68 dbt nodes — 4 table models, 5 view models, 58 data tests and 1 unit
+test — all passing, against 4,000 orders and about €329,400 of realised net revenue (€346,600
+booked, before cancellations) that grows visibly month over month. Re-running the load adds no duplicate rows, because every table merges
 on its primary key. Open the warehouse with `duckdb warehouse/refarch.duckdb`, then
 `show all tables` — the file holds the raw layer and every dbt schema together. Open the report
 at https://jb-analytica.github.io/reference-architecture/, or build it and serve it locally
@@ -99,13 +99,21 @@ plus a handful of parquet files, about 87 MB, most of it the DuckDB WASM bundle 
 browser query the parquet directly. A reader can see the dashboards without running anything,
 which the other two candidates cannot do.
 
-The report lives in `evidence/`. `evidence/pages/` holds four pages — `index.md` (net revenue,
+The report lives in `evidence/`. `evidence/pages/` holds five pages — `index.md` (net revenue,
 orders, average order value and cancellation rate, plus net revenue by month and by channel,
 order status mix, and average days to ship by month), `products.md` (top ten products by net
 revenue), `customers.md` (top twenty customers, plus lifetime net revenue by segment) and
 `cancellations.md` (rate and lost revenue over time, by channel and by product). The first three
-carry the nine figures this stack used to publish to Lightdash; the fourth is new.
+carry the nine figures this stack used to publish to Lightdash; the fourth is new. The fifth,
+`architecture.md`, is the stack explained to whoever opens the published report without ever
+seeing this repository — including what the synthetic data cannot tell them.
 `evidence/sources/refarch/` holds the connection and four thin passthrough queries, one per mart.
+
+The report reads the **prod** marts: Evidence's source queries name `refarch_marts` literally and
+it gives a query no way to read an environment variable. `refarch transform` on its own defaults
+to the `dev` target and builds `refarch_dev_marts`, so build with `--target prod` before building
+the report. `refarch report` checks for the schema and says this rather than failing inside a
+Node build.
 
 ### Revenue
 
@@ -230,9 +238,10 @@ think about. Every run reads and writes `warehouse/refarch.duckdb` and nothing e
 ## Versions
 
 Every library is at its latest stable release, with `uv.lock` committed. dbt-core 2.0 is
-deliberately *not* used: it is still a release candidate, and the only adapter that accepts it is a
-beta. See [docs/versions.md](docs/versions.md) for the reasoning and the one-line command to trial
-it anyway.
+deliberately *not* used: the newest build is still a release candidate, and the project does not
+build on it — `fct_orders` fails on a function DuckDB has. The adapter is not the obstacle. See
+[docs/versions.md](docs/versions.md) for the reasoning and the one-line command to trial it
+anyway.
 
 ## Licence
 

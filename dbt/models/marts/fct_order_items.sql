@@ -30,7 +30,11 @@ final as (
             "case when orders.order_status = 'cancelled' then 0
                   else order_items.quantity * order_items.unit_price_cents
                        - order_items.discount_cents end"
-        ) }} as realised_net_amount_eur
+        ) }} as realised_net_amount_eur,
+        -- The same flag fct_orders carries. Without it a page asking a product question had to
+        -- remember `order_status != 'cancelled'`, which is exactly the filter-you-must-remember
+        -- this mart layer exists to abolish.
+        orders.order_status = 'cancelled' as is_cancelled
     from order_items
     inner join orders on order_items.order_id = orders.order_id
 

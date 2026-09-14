@@ -38,10 +38,22 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   it — see `docs/architecture/README.md`.
 - **Evidence source queries are thin.** `evidence/sources/refarch/*.sql` select from a mart and
   nothing else. Logic there is invisible to dbt's tests and lineage.
+- **The report reads the prod marts, always.** `evidence/sources/refarch/*.sql` name
+  `refarch_marts` literally and Evidence gives a query no way to read an environment variable,
+  while `refarch transform` defaults to the `dev` target. Build with `--target prod` before
+  building the report; `refarch report` guards this and says so.
 - **`docs/architecture/diagram.html` is the source of the diagram**; `diagram.svg` and
   `diagram.png` are exports of its `<svg>` node. Edit the HTML and re-export with the
   `diagram-design` skill — never hand-edit the SVG or the PNG, and never let the drawing and the
-  prose in `docs/architecture/README.md` disagree.
+  prose in `docs/architecture/README.md` disagree. `evidence/static/architecture.svg` is a copy
+  of the exported SVG, because Evidence can only serve files from `static/`; re-copy it whenever
+  the diagram changes, or the test in `tests/test_cli.py` fails.
+- **The report explains itself on `evidence/pages/architecture.md`**, for readers who see the
+  published site and never the repo. It has to stay in step with `docs/architecture/README.md`,
+  which is the source of the two.
+- **Concrete run figures (node counts, revenue totals) live in two places only** — the README's
+  "What success looks like" and `docs/versions.md`. They were previously repeated in the diagram
+  and elsewhere and had drifted everywhere. Re-measure rather than copy.
 - **Brand values come from the website, never from judgement.** The colours in
   `evidence.config.yaml`, the `@font-face` block in `evidence/app.css` and the assets in
   `evidence/static/` all trace to `JB-Analytica/jba-website` (`assets/css/style.css`,

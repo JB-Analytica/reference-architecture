@@ -17,7 +17,8 @@ their defaults.
 |---|---|
 | Regenerate the source data | `uv run refarch generate` |
 | Load it into the warehouse | `uv run refarch load` |
-| Build and test the models | `uv run refarch transform` |
+| Build and test the models (dev schemas) | `uv run refarch transform` |
+| Build them where the report reads | `uv run refarch transform --target prod` |
 | Build one model and its parents | `uv run refarch transform build -s +fct_orders` |
 | Check source freshness | `uv run refarch transform source freshness` |
 | Build the report | `uv run refarch report` |
@@ -31,6 +32,13 @@ their defaults.
 is available without a second entry point. Inside the DuckDB shell, `show all tables` lists the
 whole warehouse — the raw layer dlt wrote and every schema dbt built — because it is all one
 file.
+
+The report always reads the **prod** marts. Evidence's source queries name `refarch_marts`
+literally and Evidence gives a query no way to read an environment variable, while
+`refarch transform` on its own defaults to the `dev` target and builds `refarch_dev_marts`. So
+`transform` then `report` will not show you what you just built unless the transform ran with
+`--target prod`. `refarch report` checks the schema is there and says so, rather than failing
+several minutes later inside a Node build.
 
 `refarch report` needs Node 18 or newer (`npm` on `PATH`); the other three stages need only
 `uv`. If `npm` is missing it says so and exits — `duckdb warehouse/refarch.duckdb` still works
@@ -61,6 +69,13 @@ products were unaffected, which is why it survived -- `a * b / 100` is still cor
 were wrong, and nothing failed: the numbers were plausible per row and absurd only in aggregate,
 where one coffee SKU out-earned the entire business. The test in `dbt/tests/` now catches it by
 cross-checking two columns that must agree.
+
+**An inner join to an optional child silently changes a count.** `dim_customers` joined
+`int_orders__items_aggregated` with an inner join, which looks harmless until you notice the
+synthetic source produces orders with no line items at all. Those orders vanished from
+`lifetime_order_count`, which claimed in its own description to be every non-cancelled order and
+was 11% short of one. The money was right, so the reconciliation test passed: both sides agreed
+on €0. Counts need their own evidence.
 
 **A model can be uniformly wrong and pass every column test.** `not_null`, `unique` and
 `accepted_values` all held while `fct_order_items.net_amount_eur` was a hundred times too large:

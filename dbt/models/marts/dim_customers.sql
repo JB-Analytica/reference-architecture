@@ -28,8 +28,13 @@ customer_orders as (
         min(orders.ordered_at) as first_order_at,
         max(orders.ordered_at) as last_order_at,
         sum(order_money.net_amount_cents) as lifetime_realised_net_amount_cents
+    -- Left, not inner: the synthetic source produces orders with no lines at all (see
+    -- docs/architecture/README.md), and an inner join silently dropped them from the counts.
+    -- lifetime_order_count claims to be every non-cancelled order, so it has to count those
+    -- too; they contribute nothing to the money, which sum() ignores and the coalesce below
+    -- turns into 0 for a customer whose every order was empty.
     from orders
-    inner join order_money on orders.order_id = order_money.order_id
+    left join order_money on orders.order_id = order_money.order_id
     group by orders.customer_id
 
 ),

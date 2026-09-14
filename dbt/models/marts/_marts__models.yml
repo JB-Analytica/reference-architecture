@@ -130,6 +130,10 @@ models:
           column to sum for product revenue.
         data_tests:
           - not_null
+      - name: is_cancelled
+        description: >
+          True when the parent order was cancelled. Carried on the line so a product question
+          can exclude cancellations without re-deriving the rule from order_status.
 
   - name: dim_customers
     description: >

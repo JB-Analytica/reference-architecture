@@ -8,7 +8,7 @@ select
     p.coffee_origin,
     p.roast_level,
     sum(i.realised_net_amount_eur) as net_revenue_eur,
-    sum(i.quantity) filter (where i.order_status != 'cancelled') as units
+    sum(i.quantity) filter (where not i.is_cancelled) as units
 from refarch.order_items i
 join refarch.products p on i.product_id = p.product_id
 group by 1, 2, 3
@@ -16,7 +16,7 @@ order by net_revenue_eur desc
 limit 10
 ```
 
-Product names run to about 35 characters, which a horizontal bar chart clips. The table below
+Product names run to nearly 40 characters, which a horizontal bar chart clips. The table below
 is the bar chart: `contentType=bar` draws the bar in the cell, where the label cannot collide
 with it.
 

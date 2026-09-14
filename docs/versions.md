@@ -35,7 +35,8 @@ first on PATH — by design, so a stray shim cannot win — which means the chil
 project's 1.12.4 no matter what `uv run --with` layers on top. Check the `Running with dbt=`
 line in the output before believing a trial result.
 
-Run that way, 54 of 64 nodes pass and `fct_orders` fails:
+Run that way, 55 of 68 nodes pass, `fct_orders` fails and the twelve nodes behind it are
+skipped:
 
 ```
 Catalog Error: Scalar Function with name date does not exist!
@@ -46,6 +47,11 @@ LINE 28:         date(orders.ordered_at) as order_date,
 something about how 2.0 and the current adapter dispatch SQL between them, not a bug in the
 model. It was not chased further: the pin is justified by the release-candidate status alone,
 and the failure only confirms it.
+
+These counts move whenever a model or a test is added; re-run the trial rather than trusting
+the numbers above. The node count is deliberately stated in only two places — here and the
+README's "What success looks like" — because it was previously in four and had drifted in all
+of them.
 
 When dbt-core 2.0 is released and a `dbt-duckdb` that is tested against it follows, the change
 is to raise the two floors in `pyproject.toml`, re-lock, and re-run the trial above. Nothing in

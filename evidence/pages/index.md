@@ -26,10 +26,15 @@ from refarch.orders
 <BigValue data={headline} value=cancellation_rate title="Cancellation rate" fmt=pct1 />
 
 Net revenue is **realised**: cancelled orders count as zero, not as revenue. Booked revenue —
-every order as placed — was €<Value data={headline} value=booked_revenue_eur fmt=num0 />, so
-cancellations cost <Value data={headline} value=revenue_lost_eur fmt=eur0 />. Both columns live
+every order as placed — was <Value data={headline} column=booked_revenue_eur fmt=eur0 />, so
+cancellations cost <Value data={headline} column=revenue_lost_eur fmt=eur0 />. Both columns live
 on `fct_orders`, which is why the two numbers can sit side by side without either being a filter
 somebody has to remember. [Cancellations](/cancellations) breaks the gap down.
+
+Average order value is realised revenue over orders that were not cancelled. It reads low —
+about one generated order in nine has no line items at all and so contributes €0, which is an
+artefact of the synthetic source rather than a fact about the business.
+[Architecture](/architecture) says where else that shows.
 
 ## Revenue over time
 

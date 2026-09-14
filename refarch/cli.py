@@ -51,7 +51,7 @@ def _dbt_env(target: str | None = None) -> dict[str, str]:
 def _run(cmd: list[str], cwd: Path = ROOT, env: dict[str, str] | None = None) -> None:
     """Run a child command, surfacing its own output and exit code.
 
-    The child (dbt, lightdash) has already printed a better diagnostic than any traceback of
+    The child (dbt, npm) has already printed a better diagnostic than any traceback of
     ours would be, so exit with its status instead of raising through Typer.
     """
     typer.secho("$ " + " ".join(cmd), fg=typer.colors.BLUE)
@@ -121,6 +121,47 @@ def _evidence_env() -> dict[str, str]:
     return env
 
 
+# Evidence's source queries name the schema literally (`select * from refarch_marts.fct_orders`),
+# and Evidence gives a query no way to read an environment variable. So the report can only ever
+# read the prod marts -- while `refarch transform` defaults to the `dev` target, which builds
+# refarch_dev_marts instead. Left alone that combination either fails deep inside a Node build
+# with a DuckDB catalog error, or silently reports an older prod build's numbers.
+MARTS_SCHEMA = "refarch_marts"
+
+
+def _require_marts() -> None:
+    """Fail early, and in our own words, when the prod marts the report reads are not there."""
+    import duckdb
+
+    warehouse = settings().warehouse_path
+    if not warehouse.exists():
+        typer.secho(
+            f"No warehouse at {warehouse}. Run `refarch run --target prod` first.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
+    con = duckdb.connect(str(warehouse), read_only=True)
+    try:
+        found = con.execute(
+            "select count(*) from information_schema.schemata where schema_name = ?",
+            [MARTS_SCHEMA],
+        ).fetchone()
+    finally:
+        con.close()
+    if not found or not found[0]:
+        typer.secho(
+            f"{warehouse} has no {MARTS_SCHEMA} schema, so the report has nothing to read.\n"
+            "Evidence's source queries name that schema literally, so the report always reads "
+            "the prod marts. `refarch transform` on its own defaults to the dev target and "
+            "builds refarch_dev_marts. Run `refarch transform --target prod` (or "
+            "`refarch run --target prod`) and try again.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
+
+
 def _require_npm() -> str:
     """Evidence is a Node application; this is the one stage `uv` alone cannot run."""
     npm = shutil.which("npm")
@@ -182,6 +223,7 @@ def report(
             err=True,
         )
         raise typer.Exit(1)
+    _require_marts()
     npm = _require_npm()
     env = _evidence_env()
     with _base_path(base_path):
