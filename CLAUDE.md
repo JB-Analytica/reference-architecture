@@ -1,15 +1,13 @@
 # reference-architecture
 
-A runnable reference stack: DBML → model2data → dlt → DuckDB → dbt. It is published as a worked
-example, so changes should hold up as one — readable and honest, not just working.
+A runnable reference stack: DBML → model2data → dlt → DuckDB → dbt → Evidence. It is published
+as a worked example, so changes should hold up as one — readable and honest, not just working.
 
 It runs with no accounts and no credentials: `git clone`, `uv sync`, `uv run refarch run`. That
 constraint is the point, not a convenience — protect it. A change that reintroduces a required
-secret, a cloud project or a paid service puts the whole example back behind a signup.
-
-**The BI layer is an open question.** Lightdash was dropped with BigQuery (it has no DuckDB
-connector) and no replacement has been chosen yet. The marts and their metric definitions are
-in place and waiting for one.
+secret, a cloud project or a paid service puts the whole example back behind a signup. Node is
+the one extra prerequisite, and only for the report stage; the first three stages run on `uv`
+alone and `refarch report` says so when npm is missing.
 
 ## Commands
 
@@ -29,15 +27,26 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
 - `dbt/` — staging (one model per source table) → intermediate → marts. `profiles.yml` is
   checked in and needs no environment at all.
 - `warehouse/` — git-ignored. The DuckDB file the stack builds; rebuild with `refarch run`.
+- `evidence/` — the report. `pages/` are the dashboards, `sources/refarch/` the queries that
+  feed them. `package-lock.json` is committed; `node_modules/`, `.evidence/` and `build/` are not.
 
 ## Conventions specific to this repo
 
-- **Metrics are defined in `dbt/models/marts/_marts__models.yml`, never in a BI tool's UI.**
-  A metric added through a UI is invisible to review and is lost on the next deploy. Those
-  blocks still carry Lightdash's `meta:` syntax; the definitions are the substance and the
-  spelling gets reconciled when a front end is picked.
-- **Only marts are exposed to BI**, via the `bi` tag that `dbt_project.yml` applies to the
-  marts folder. Do not tag a staging or intermediate model.
+- **Column definitions live in dbt, never in a report page.** `net_amount_eur`, `is_cancelled`
+  and `days_to_ship` are computed in the marts; an Evidence page may group and sum them, but it
+  may not redefine what they mean. Evidence has no semantic layer of its own, so the marts are
+  it — see `docs/architecture/README.md`.
+- **Evidence source queries are thin.** `evidence/sources/refarch/*.sql` select from a mart and
+  nothing else. Logic there is invisible to dbt's tests and lineage.
+- **Brand values come from the website, never from judgement.** The colours in
+  `evidence.config.yaml`, the `@font-face` block in `evidence/app.css` and the assets in
+  `evidence/static/` all trace to `JB-Analytica/jba-website` (`assets/css/style.css`,
+  `assets/fonts/`, `assets/images/`). If a colour is needed that the site does not define, take
+  it from the site's palette and say in a comment that it was derived — do not invent a hue. The
+  site's accessibility choices come with it: `--orange` is a fill, `--orange-text` is for text.
+- **Only marts are exposed to the report**, via the `bi` tag that `dbt_project.yml` applies to
+  the marts folder. Do not tag a staging or intermediate model, and do not point an Evidence
+  source at one.
 - **Warehouse SQL is DuckDB SQL.** No `initcap`, no `timestamp_diff`, no `safe_divide`. Where
   a dialect gap needs papering over, add a macro next to `cents_to_eur` and `title_case` rather
   than inlining the workaround.
@@ -57,6 +66,14 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   run ignores new data.
 - **`loaded_at_field` in the sources YAML must be literal SQL** — it is rendered at parse time
   where project macros are not visible.
-- **The architecture diagrams under `docs/architecture/` still show BigQuery and Lightdash.**
-  They have not been regenerated since the move to DuckDB.
+- **Evidence pins thirteen exact peer dependencies** (`typescript@5.4.2`, `svelte@4.2.19`, …).
+  They are in `evidence/package.json` because npm refuses to install without them, and npm
+  reports one conflict at a time. On an Evidence upgrade, re-read its `peerDependencies` and
+  replace the whole set.
+- **Evidence resolves a source's `filename` against that source's own folder** and overwrites any
+  `directory` it is given, so the warehouse can only be named relative to
+  `evidence/sources/refarch/`. `refarch report` computes that relative path; do not "simplify" it
+  to an absolute one.
+- **`npm audit` reports criticals that cannot be fixed here** and do not reach the built site —
+  see `docs/versions.md` before acting on them. CI does not gate on it, deliberately.
 - dbt-core is pinned `<2` on purpose — see `docs/versions.md` before raising it.

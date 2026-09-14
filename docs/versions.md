@@ -11,6 +11,9 @@ tested here.
 | dbt-duckdb | 1.11.0 | latest that accepts dbt-core `<2` |
 | model2data | 1.7.1 | latest |
 | duckdb / duckdb-engine | 1.5.5 / 0.17.0 | latest |
+| @evidence-dev/evidence | 40.1.8 | latest |
+| @evidence-dev/duckdb | 2.0.1 | latest |
+| typescript, svelte, vite, … | exact | pinned by Evidence; see below |
 
 ## Why not dbt-core 2.0
 
@@ -47,3 +50,38 @@ and the failure only confirms it.
 When dbt-core 2.0 is released and a `dbt-duckdb` that is tested against it follows, the change
 is to raise the two floors in `pyproject.toml`, re-lock, and re-run the trial above. Nothing in
 the models or the semantic layer is expected to need edits.
+
+## Fonts
+
+Poppins and JetBrains Mono are vendored into `evidence/static/fonts` (sixteen woff2 files, 212 KB)
+rather than loaded from a CDN, so the built report has no third-party runtime dependency and works
+offline. They are copies of `JB-Analytica/jba-website`'s `assets/fonts/`; if the site changes its
+faces, re-copy them and the `@font-face` block in `evidence/app.css` together.
+
+## Why evidence/package.json pins so much
+
+Evidence declares thirteen **exact** peer dependencies — `typescript@5.4.2`, `svelte@4.2.19`,
+`vite@5.4.21` and so on. npm will not install the project without them present at those exact
+versions, and the error it gives names one conflict at a time. They are listed in
+`evidence/package.json` for that reason, not because this project has an opinion about any of
+them. When Evidence is upgraded, re-read its `peerDependencies` and replace the whole set.
+
+## Why `npm audit` reports vulnerabilities
+
+It reports 31, seven of them critical, and none of them are fixable here or reach anything this
+project ships. They are worth understanding rather than ignoring:
+
+- Every one is in Evidence's **build toolchain** — vitest, vite's dev server, minimatch, nanoid,
+  the markdown parser. `evidence build` emits static HTML and parquet; there is no server
+  process in the output for these to be exploited in.
+- Some are not even in the code path. The worst-rated, `@sveltejs/adapter-node`'s
+  `BODY_SIZE_LIMIT` bypass, applies to the Node adapter; this project builds through
+  `@sveltejs/adapter-static`. The vitest advisory needs its UI server running, which nothing
+  here starts.
+- They cannot be fixed downstream. The versions are pinned by Evidence's own exact peers, so
+  `npm audit fix --force` would break the install rather than repair it.
+
+CI deliberately does not gate on `npm audit`: it would fail permanently on upstream issues this
+repo cannot act on, and a check that is always red teaches people to ignore checks. The risk that
+does remain is a poisoned build-time dependency, which is why `package-lock.json` is committed
+and CI installs with `npm ci` rather than `npm install`.

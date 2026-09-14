@@ -16,6 +16,12 @@ source_system/generated/
 # the warehouse (rebuild it with `refarch run`)
 warehouse/
 
+# Evidence build artefacts (package-lock.json is committed, like uv.lock)
+evidence/node_modules/
+evidence/.evidence/
+evidence/build/
+evidence/static/data/
+
 # dlt / dbt run artefacts
 .dlt/pipelines/
 .dlt/secrets.toml

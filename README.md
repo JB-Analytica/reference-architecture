@@ -1,19 +1,20 @@
 # Reference architecture
 
-A complete, running analytics stack that you can clone and run with nothing installed but `uv` —
-no account, no credentials, no `.env`. It stands up on a laptop against a local DuckDB file, and
-points at a real warehouse by changing one connection string.
+A complete, running analytics stack that you can clone and run against a local DuckDB file with
+no account and no credentials. Only the report stage needs anything beyond `uv` — see
+[What you need first](#what-you-need-first). It points at a real warehouse by changing one
+connection string.
 
 ![The reference architecture: two interchangeable sources meeting at one swap point, then dlt, BigQuery, dbt and Lightdash](docs/architecture/diagram.svg)
 
 *The diagram above still shows the BigQuery/Lightdash version of this stack — it has not been
-redrawn for the DuckDB move (see [docs/architecture/README.md](docs/architecture/README.md)).
-The running code is now `model2data` → `dlt` → DuckDB → `dbt`.*
+redrawn for the move to DuckDB and Evidence (see
+[docs/architecture/README.md](docs/architecture/README.md)). The running code is now
+`model2data` → `dlt` → DuckDB → `dbt` → `Evidence`.*
 
-`model2data` → `dlt` → DuckDB → `dbt`. Every layer is real and every layer runs; nothing here is
-a sketch of how it would work. There is no BI layer wired up yet — see
-[Front end](#front-end) — so the stack currently ends at a queryable warehouse file, not a
-dashboard.
+`model2data` → `dlt` → DuckDB → `dbt` → `Evidence`. Every layer is real and every layer runs;
+nothing here is a sketch of how it would work. The stack ends at a static report you can open in
+a browser, built from the same DuckDB file the dbt run left behind.
 
 It is published as something to read and take apart. Clone it, run it, disagree with the layering,
 copy the bits that are useful. It is a worked example rather than a library, so there is no package
@@ -29,9 +30,10 @@ real, relationship-preserving database with a Q4 peak, a realistic cancellation 
 long-tailed order distribution. The pipeline that reads it is `dlt`'s generic `sql_database`
 source — the same one you would point at Postgres.
 
-**Metrics live in dbt, not in a BI tool.** `net_revenue_eur` and the rest of the semantic layer
-are defined once in `dbt/models/marts/_marts__models.yml`, reviewed in a pull request, and
-survive whichever front end eventually reads them — see [Front end](#front-end).
+**Column definitions live in dbt, not in a BI tool.** `net_amount_eur`, `is_cancelled`,
+`days_to_ship` and the rest of the columns the report charts are defined once in the mart SQL,
+reviewed in a pull request, and read by Evidence without being redefined — see
+[The report](#the-report).
 
 **Only the marts are exposed.** Every mart carries the `bi` tag from `dbt_project.yml`, so
 staging and intermediate models stay available for lineage and debugging but are never the
@@ -47,11 +49,13 @@ and seed always produce the same rows.
 
 | Requirement | Why | Notes |
 |---|---|---|
-| [uv](https://docs.astral.sh/uv/) | runs everything Python | `brew install uv`, or the official installer |
+| [uv](https://docs.astral.sh/uv/) | runs generate, load and transform | `brew install uv`, or the official installer |
+| Node 18 or newer | runs the report | developed against Node 20; `brew install node` |
 
-That's the whole list. The warehouse is a DuckDB file the pipeline creates itself, so there is
-nothing to sign up for, nothing to pay for, and no `.env` you have to fill in before the first
-run.
+The first three stages need only `uv`: there is nothing to sign up for, nothing to pay for, and
+no `.env` you have to fill in before the first run. Node is only needed for the fourth stage, the
+Evidence report. If `npm` is not on your `PATH`, `refarch report` says so and exits, and you can
+still inspect everything the pipeline produced with `duckdb warehouse/refarch.duckdb`.
 
 ## Quick start
 
@@ -60,40 +64,85 @@ uv sync --extra dev
 uv run refarch run --target prod
 ```
 
-That's it — no `.env`, no credentials, no account. `refarch run` generates the synthetic source,
-loads it, and builds and tests every dbt model, all against a DuckDB file at
-`warehouse/refarch.duckdb`. `.env.example` documents two optional overrides
-(`DBT_TARGET`, `REFARCH_WAREHOUSE`); copy it to `.env` only if you want to change one of them.
+No `.env`, no credentials, no account. `refarch run` generates the synthetic source, loads it,
+builds and tests every dbt model, and builds the static report, all against a DuckDB file at
+`warehouse/refarch.duckdb`. The whole run takes about 43 seconds from a clean clone.
+`.env.example` documents two optional overrides (`DBT_TARGET`, `REFARCH_WAREHOUSE`); copy it to
+`.env` only if you want to change one of them. Pass `--skip-report` to stop after dbt if you do
+not have Node installed.
 
-### The three stages
+### The four stages
 
 | Stage | Command | What happens |
 |---|---|---|
 | 1 | `refarch generate` | model2data builds the synthetic source system as a DuckDB file |
 | 2 | `refarch load` | dlt loads it into the warehouse, incrementally, merging on the primary key |
 | 3 | `refarch transform` | dbt builds and tests staging → intermediate → marts |
+| 4 | `refarch report` | Evidence builds the static report over the warehouse into `evidence/build` |
 
 `refarch transform` passes extra arguments straight through to dbt, so
 `refarch transform build -s +fct_orders` and `refarch transform source freshness` both work.
+`refarch report --dev` serves the report with hot reload instead, for writing pages.
 
 ### What success looks like
 
 A finished run builds 64 dbt nodes — 4 table models, 5 view models, 54 data tests and 1 unit
 test — all passing, against roughly 4,000 orders and around €346,600 in net revenue that grows
 visibly month over month. Re-running the load adds no duplicate rows, because every table merges
-on its primary key. Open the result with `duckdb warehouse/refarch.duckdb`, then
-`show all tables` — the file holds the raw layer and every dbt schema together.
+on its primary key. Open the warehouse with `duckdb warehouse/refarch.duckdb`, then
+`show all tables` — the file holds the raw layer and every dbt schema together. Open the report
+at `evidence/build/index.html` — no server needed, it is a self-contained static site.
 
-## Front end
+## The report
 
-There is no BI layer wired up. The stack used to end at Lightdash, but Lightdash has no DuckDB
-connector, so it could not make the move and was removed along with `refarch/lightdash_api.py`,
-the `lightdash/` directory and the `deploy` command. The metric definitions in
-`dbt/models/marts/_marts__models.yml` were kept — they are the substance of a semantic layer —
-but they still carry Lightdash's `meta:` syntax pending a replacement, which has not been chosen.
-Candidates under consideration include [Evidence.dev](https://evidence.dev/),
-[Rill Developer](https://www.rilldata.com/) and dbt's own MetricFlow, all of which can read a
-DuckDB file directly. Until one is picked, `duckdb warehouse/refarch.duckdb` is the front end.
+The stack used to end at Lightdash, which has no DuckDB connector and so could not make the move;
+it was removed along with `refarch/lightdash_api.py`, the `lightdash/` directory and the `deploy`
+command. Its replacement is [Evidence](https://evidence.dev/), chosen over Rill Developer and
+dbt's own MetricFlow for one reason: `evidence build` emits a self-contained static site — HTML
+plus a handful of parquet files, about 87 MB, most of it the DuckDB WASM bundle that lets the
+browser query the parquet directly. A reader can see the dashboards without running anything,
+which the other two candidates cannot do.
+
+The report lives in `evidence/`. `evidence/pages/` holds three pages — `index.md` (net revenue,
+orders, average order value and cancellation rate, plus net revenue by month and by channel,
+order status mix, and average days to ship by month), `products.md` (top ten products by net
+revenue) and `customers.md` (top twenty customers, plus lifetime net revenue by segment) — the
+same nine figures this stack used to publish to Lightdash. `evidence/sources/refarch/` holds the
+connection and four thin passthrough queries, one per mart.
+
+Evidence has no semantic layer of its own, so the trade from the Lightdash days is real: the dbt
+marts are now the semantic layer for column definitions — `net_amount_eur`, `is_cancelled`,
+`days_to_ship`, `lifetime_net_revenue_eur` are all defined once in mart SQL and Evidence pages
+only group and sum them — but the aggregations themselves (`sum`, `count`, the two ratios) are
+now written in each page's SQL rather than declared once in YAML. They are still in git and still
+code-reviewed, but there is no single declarative metric definition the way Lightdash's `meta:`
+blocks were, and those blocks have been deleted from
+`dbt/models/marts/_marts__models.yml` rather than kept around unused.
+
+### Brand
+
+The report carries JB Analytica's own look rather than Evidence's default, and every value is
+taken from the website's stylesheet rather than eyeballed:
+
+- **Type.** Poppins and JetBrains Mono, the faces jbanalytica.com uses. The `@font-face` block in
+  `evidence/app.css` is lifted verbatim from the site's `assets/css/style.css` with only the
+  `url()` paths rewritten, and all sixteen files are self-hosted under `evidence/static/fonts`,
+  so the built report stays self-contained and never calls a font CDN.
+- **Colour.** `evidence.config.yaml` maps the site's CSS custom properties onto Evidence's theme
+  tokens. Two of them are deliberately not the obvious choice, and the file says why: `primary`
+  is `--link-blue`, not `--bright-blue`, and `accent` is `--orange-text`, not `--orange`, because
+  the brand keeps a separate darker orange for accent text that clears 4.5:1 on light grounds.
+  The chart palette is derived from the brand colours and stops there rather than being padded
+  out with invented hues.
+- **Marks.** The wordmark in the header and the full favicon set are the site's own assets. The
+  wordmark is cropped to its content box, because the source PNG carries enough transparent
+  padding to render it about half size at the header's 20px height.
+
+Three files carry it: `evidence.config.yaml` (colour), `evidence/app.css` (type) and
+`evidence/tailwind.config.cjs` (font family). `evidence/pages/+layout.svelte` puts the wordmark in
+the header. What is not themed is Evidence's layout chrome — the sidebar, the spacing, the
+table and chart furniture are Evidence's, and the brand sits on top of them rather than replacing
+them.
 
 ## Working on it
 
@@ -109,7 +158,8 @@ including incremental merge is covered by the same kind of file the real run pro
 
 - `source_system/` — the DBML data model. The only description of the source system.
 - `refarch/` — the Python package: config, the model2data wrapper, the dlt pipeline, the CLI.
-- `dbt/` — the dbt project. `models/marts/_marts__models.yml` carries the semantic layer.
+- `dbt/` — the dbt project. Marts carry the column definitions the report reads.
+- `evidence/` — the Evidence project: `pages/` and `sources/refarch/`. `build/` is git-ignored.
 - `tests/` — pytest, mirroring the package.
 - `docs/` — [architecture](docs/architecture/README.md), [runbook](docs/runbook.md),
   [versions](docs/versions.md).
@@ -137,11 +187,12 @@ and nothing above it needs to know which warehouse it is talking to.
 ## Automation
 
 One GitHub Actions workflow, `ci.yml`, with two jobs. `checks` runs lint, types and tests on
-every push and pull request. `pipeline` then runs the full stack — generate, load, transform,
-source freshness — on every pull request too, and uploads the resulting
-`warehouse/refarch.duckdb` as a downloadable artifact. That is only possible because the
-warehouse is a file: there is no account to hold a secret for, so the job runs the same way on a
-fork as it does here.
+every push and pull request. `pipeline` sets up Node 20, installs Evidence's dependencies, then
+runs the full stack — generate, load, transform, report, source freshness — on every pull
+request too, and uploads two artifacts: `warehouse` (the DuckDB file) and `report` (the built
+static site — unzip it and open `index.html`, no server needed). That is only possible because
+the warehouse is a file: there is no account to hold a secret for, so the job runs the same way
+on a fork as it does here.
 
 ## Cost
 
@@ -163,4 +214,4 @@ it anyway.
 
 Built and maintained by [JB Analytica](https://www.jbanalytica.com/), on top of
 [model2data](https://github.com/JB-Analytica/model2data), [dlt](https://dlthub.com/),
-[DuckDB](https://duckdb.org/) and [dbt](https://www.getdbt.com/).
+[DuckDB](https://duckdb.org/), [dbt](https://www.getdbt.com/) and [Evidence](https://evidence.dev/).

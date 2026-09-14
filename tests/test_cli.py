@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -10,7 +11,7 @@ from refarch.cli import app
 def test_help_lists_every_stage() -> None:
     result = CliRunner().invoke(app, ["--help"])
     assert result.exit_code == 0
-    for stage in ("generate", "load", "transform", "run"):
+    for stage in ("generate", "load", "transform", "report", "run"):
         assert stage in result.output
 
 
@@ -36,3 +37,22 @@ def test_warehouse_path_is_overridable(monkeypatch, tmp_path: Path) -> None:
 
     monkeypatch.setenv("REFARCH_WAREHOUSE", str(tmp_path / "elsewhere.duckdb"))
     assert settings().warehouse_path == tmp_path / "elsewhere.duckdb"
+
+
+def test_evidence_filename_is_relative_to_the_source_folder(monkeypatch, tmp_path: Path) -> None:
+    """Evidence cannot be given an absolute warehouse path.
+
+    It resolves a source's `filename` against that source's own folder and overwrites any
+    `directory` handed to it, so the override has to be a relative path. If this ever silently
+    became absolute, Evidence would look for the warehouse *inside* evidence/sources/refarch and
+    report that the database does not exist.
+    """
+    from refarch.cli import _evidence_env
+    from refarch.config import EVIDENCE_SOURCE_DIR
+
+    monkeypatch.setenv("REFARCH_WAREHOUSE", str(tmp_path / "elsewhere" / "refarch.duckdb"))
+    filename = _evidence_env()["EVIDENCE_SOURCE__refarch__filename"]
+
+    assert not os.path.isabs(filename)
+    resolved = (EVIDENCE_SOURCE_DIR / filename).resolve()
+    assert resolved == (tmp_path / "elsewhere" / "refarch.duckdb").resolve()

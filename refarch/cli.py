@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -10,10 +11,10 @@ from pathlib import Path
 import typer
 
 from refarch import generate as generate_stage
-from refarch.config import DBT_DIR, ROOT, settings
+from refarch.config import DBT_DIR, EVIDENCE_DIR, EVIDENCE_SOURCE_DIR, ROOT, settings
 
 app = typer.Typer(
-    help="model2data -> dlt -> DuckDB -> dbt, stage by stage.",
+    help="model2data -> dlt -> DuckDB -> dbt -> Evidence, stage by stage.",
     no_args_is_help=True,
     context_settings={"help_option_names": ["-h", "--help"]},
 )
@@ -96,16 +97,75 @@ def transform(
     typer.secho("Transformations built.", fg=typer.colors.GREEN)
 
 
+def _evidence_env() -> dict[str, str]:
+    """Environment for the Evidence child process.
+
+    Evidence resolves a source's `filename` against that source's own folder and ignores any
+    `directory` handed to it, so an absolute path cannot be expressed: the override has to be
+    the warehouse's path *relative to* evidence/sources/refarch. Computing it here means
+    REFARCH_WAREHOUSE keeps working wherever it points, and dbt and Evidence cannot drift onto
+    two different files.
+    """
+    env = dict(os.environ)
+    warehouse = settings().warehouse_path.resolve()
+    env["EVIDENCE_SOURCE__refarch__filename"] = os.path.relpath(warehouse, EVIDENCE_SOURCE_DIR)
+    return env
+
+
+def _require_npm() -> str:
+    """Evidence is a Node application; this is the one stage `uv` alone cannot run."""
+    npm = shutil.which("npm")
+    if npm is None:
+        typer.secho(
+            "npm was not found. The report stage needs Node 18 or newer -- everything before "
+            "it (generate, load, transform) runs without it. Install Node, or run the earlier "
+            "stages and inspect the warehouse with `duckdb warehouse/refarch.duckdb`.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
+    if not (EVIDENCE_DIR / "node_modules").exists():
+        typer.secho("Installing Evidence's dependencies (first run only).", fg=typer.colors.BLUE)
+        _run([npm, "ci"], cwd=EVIDENCE_DIR)
+    return npm
+
+
+@app.command()
+def report(
+    dev: bool = typer.Option(
+        False, help="Serve with hot reload instead of building the static site."
+    ),
+) -> None:
+    """Stage 4 -- build the Evidence report over the warehouse (static site in evidence/build)."""
+    npm = _require_npm()
+    env = _evidence_env()
+    # `sources` re-reads the warehouse and rewrites the parquet the report queries. Always run
+    # it first, or the report silently renders the previous run's numbers.
+    _run([npm, "run", "sources"], cwd=EVIDENCE_DIR, env=env)
+    if dev:
+        _run([npm, "run", "dev"], cwd=EVIDENCE_DIR, env=env)
+        return
+    _run([npm, "run", "build"], cwd=EVIDENCE_DIR, env=env)
+    typer.secho(
+        f"Report built. Open {EVIDENCE_DIR / 'build' / 'index.html'}, or serve it with "
+        "`npm run preview` from evidence/.",
+        fg=typer.colors.GREEN,
+    )
+
+
 @app.command()
 def run(
     target: str = typer.Option("prod", help="dbt target for the transform stage."),
     skip_generate: bool = typer.Option(False, help="Reuse the existing generated source system."),
+    skip_report: bool = typer.Option(False, help="Stop after dbt; do not build the report."),
 ) -> None:
-    """Run every stage in order: generate -> load -> transform."""
+    """Run every stage in order: generate -> load -> transform -> report."""
     if not skip_generate:
         generate_stage.generate()
     load()
     _run(["dbt", "build"], cwd=DBT_DIR, env=_dbt_env(target))
+    if not skip_report:
+        report(dev=False)
     typer.secho(
         f"Full run complete. The warehouse is {settings().warehouse_path}.",
         fg=typer.colors.GREEN,

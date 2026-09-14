@@ -33,6 +33,12 @@ RAW_DATASET = f"raw_{SOURCE_SYSTEM_NAME}"
 WAREHOUSE_DIR = ROOT / "warehouse"
 DEFAULT_WAREHOUSE = WAREHOUSE_DIR / "refarch.duckdb"
 
+# --- the report ---------------------------------------------------------------------------------
+EVIDENCE_DIR = ROOT / "evidence"
+# Evidence resolves a source's `filename` against the source's own folder and overwrites any
+# `directory` it is given, so the warehouse can only ever be named relative to this path.
+EVIDENCE_SOURCE_DIR = EVIDENCE_DIR / "sources" / "refarch"
+
 
 @dataclass(frozen=True)
 class Settings:

@@ -20,7 +20,10 @@ their defaults.
 | Build and test the models | `uv run refarch transform` |
 | Build one model and its parents | `uv run refarch transform build -s +fct_orders` |
 | Check source freshness | `uv run refarch transform source freshness` |
+| Build the report | `uv run refarch report` |
+| Serve the report with hot reload | `uv run refarch report --dev` |
 | Everything, in order | `uv run refarch run` |
+| Everything except the report | `uv run refarch run --skip-report` |
 | Lint, types, tests | `uv run poe check` |
 | Open the warehouse | `duckdb warehouse/refarch.duckdb` |
 
@@ -28,6 +31,11 @@ their defaults.
 is available without a second entry point. Inside the DuckDB shell, `show all tables` lists the
 whole warehouse — the raw layer dlt wrote and every schema dbt built — because it is all one
 file.
+
+`refarch report` needs Node 18 or newer (`npm` on `PATH`); the other three stages need only
+`uv`. If `npm` is missing it says so and exits — `duckdb warehouse/refarch.duckdb` still works
+against whatever `transform` already built. The built report is a static site at
+`evidence/build/index.html`; open it directly, no server needed.
 
 ## Changing the data model
 
@@ -55,3 +63,17 @@ file, so they have to run in sequence — which they already do, one after the o
 `source_system/generated/`.) The failure is a clear `IO Error: Could not set lock on file`, not
 corruption. The usual cause is a `duckdb warehouse/refarch.duckdb` shell left open in another
 terminal — close it and re-run.
+
+**Evidence resolves a source's `filename` against that source's own folder, ignoring any
+`directory` given to it.** That means the warehouse can only be named relative to
+`evidence/sources/refarch/`, not by an absolute path. `refarch report` works around it by
+computing that relative path itself and injecting it as
+`EVIDENCE_SOURCE__refarch__filename`, so dbt (via `REFARCH_WAREHOUSE`) and Evidence always read
+the same file no matter where `REFARCH_WAREHOUSE` points.
+
+**`npm run sources` has to run before a build, or the report renders the previous run's
+numbers.** It re-reads the warehouse and rewrites the parquet the pages query; skip it and
+`evidence build` or `evidence dev` will silently show stale figures. `refarch report` always
+runs it first, so this only bites if you drive Evidence directly from `evidence/`. See
+[docs/versions.md](versions.md) for why `npm audit` reports vulnerabilities and why the peer
+dependencies are pinned so exactly.

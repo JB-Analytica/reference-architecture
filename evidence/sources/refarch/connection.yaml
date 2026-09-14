@@ -1,0 +1,10 @@
+# The DuckDB file dbt builds. The connector opens it READ_ONLY, so a report build can never
+# lock out or disturb a pipeline run.
+#
+# `refarch report` overrides this with an absolute path via EVIDENCE_SOURCE__refarch__filename,
+# the same way it hands dbt REFARCH_WAREHOUSE -- so the two always read the same file. The
+# relative path below is the fallback that makes a bare `npm run sources` work from this folder.
+name: refarch
+type: duckdb
+options:
+  filename: ../../../warehouse/refarch.duckdb

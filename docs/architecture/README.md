@@ -1,7 +1,7 @@
 # How the pieces fit
 
 The diagram below (and the SVG/PNG further down this page) predates this move and still shows
-BigQuery and Lightdash. The stack that actually runs today is shorter by one stage:
+BigQuery and Lightdash, not DuckDB and Evidence. The stack that actually runs today:
 
 ```
 source_system/webshop.dbml
@@ -14,11 +14,14 @@ warehouse/refarch.duckdb  raw_webshop.*   ← landed exactly as the source had i
         │  dbt: staging → intermediate → marts
         ▼
 warehouse/refarch.duckdb  refarch_staging / _intermediate / _marts   ← same file, different schemas
+        │  Evidence: reads the marts, builds a static site
+        ▼
+evidence/build/   ← HTML + parquet, open index.html, no server needed
 ```
 
 Both the raw layer and every dbt layer live in the one DuckDB file — dlt and dbt just write
-different schemas into it. There is no fifth stage: the marts are the end of the pipeline until a
-BI front end is chosen (see the README's [Front end](../../README.md#front-end) section).
+different schemas into it. Evidence is a fourth stage on top, not part of the file: it reads the
+marts through four passthrough queries and writes its own output to `evidence/build/`.
 
 ## The one seam that matters
 
@@ -51,14 +54,22 @@ and the append-only `order_items` pages on its key. dlt's `_dlt_load_id` is enab
 Intermediate holds the one piece of arithmetic two marts both need — line items rolled up to
 order grain. Marts are `dim_`/`fct_` and are the only layer anything downstream may read.
 
-**Semantic layer (`dbt/models/marts/_marts__models.yml`).** Metrics live in dbt, not in a BI
-tool's UI. `net_revenue_eur` means one thing, is code-reviewed, and travels with the repo. The
-YAML still carries Lightdash's `meta:` syntax, kept as-is because the definitions themselves are
-the substance and a replacement front end has not been chosen yet — see the README.
+**Semantic layer (`dbt/models/marts/`).** Column definitions live in dbt, not in a BI tool's UI.
+`net_amount_eur`, `is_cancelled`, `days_to_ship` and `lifetime_net_revenue_eur` each mean one
+thing, are code-reviewed, and travel with the repo. Evidence has no semantic layer of its own, so
+these mart columns are now the whole of it — Lightdash's `meta:` metric blocks, which used to
+declare `sum`/`count` aggregations once in this YAML, have been deleted. What survives that
+switch and what does not is worth being precise about: the column definitions still live in one
+reviewed place, but the aggregations that turn columns into headline numbers — `sum`, `count`,
+the two ratios on the index page — are now written directly in each Evidence page's SQL. They are
+still in git and still reviewed in the same pull request as everything else, but there is no
+longer a single declarative place a metric is defined once and reused everywhere; a second page
+that wants net revenue writes its own `sum(net_amount_eur)`.
 
-**Exposure control.** `dbt_project.yml` tags every mart `bi`. There is no BI tool reading that
-tag today, but the intent is unchanged: staging and intermediate models stay in the warehouse
-for lineage and debugging and are never the layer a BI tool or an analyst is pointed at.
+**Exposure control.** `dbt_project.yml` tags every mart `bi`. Evidence's four source queries
+(`evidence/sources/refarch/*.sql`) each select from exactly one mart, so that tag is the same
+boundary it always was: staging and intermediate models stay in the warehouse for lineage and
+debugging and are never the layer the report or an analyst is pointed at.
 
 ## Money
 
@@ -79,8 +90,9 @@ functions — it stays literal SQL either way, for the reason in the runbook.
 
 **Stale.** `diagram.svg`, `diagram.png`, `diagram-v2.png` and `diagram-v2.html` below still show
 the BigQuery/Lightdash version of this stack and have not been regenerated for the move to
-DuckDB. They are kept as a record of the previous architecture rather than removed; treat the
-"How the pieces fit" diagram above this section as the current one.
+DuckDB, nor for the addition of Evidence as the fourth stage. They are kept as a record of the
+previous architecture rather than removed; treat the "How the pieces fit" diagram above this
+section as the current one.
 
 ![Reference architecture](diagram.svg)
 
