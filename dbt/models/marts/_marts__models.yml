@@ -1,12 +1,15 @@
 version: 2
 
-# The marts layer is the contract with the business, and the only layer Lightdash exposes
-# (`refarch deploy` restricts explores to the `lightdash` tag, which dbt_project.yml puts on
-# everything in this folder).
+# The marts layer is the contract with the business, and the only layer a BI tool should see
+# (dbt_project.yml tags everything in this folder `bi`).
 #
-# Metrics are defined here, once, in dbt -- not in Lightdash's UI. That is the whole point of
+# Metrics are defined here, once, in dbt -- never in a BI tool's UI. That is the whole point of
 # the semantic layer: "revenue" means the same thing in every chart, it is code-reviewed, and
 # it moves between projects with the repo.
+#
+# The `meta` blocks below still carry Lightdash's dimension/metric syntax, which is what this
+# stack used before it moved to DuckDB. The definitions are the substance and are kept as they
+# are; the spelling gets reconciled when a replacement front end is chosen.
 
 models:
   - name: fct_orders

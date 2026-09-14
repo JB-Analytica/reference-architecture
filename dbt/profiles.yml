@@ -1,25 +1,18 @@
-# Checked in on purpose: it contains no secrets. The key file path, project and target come
-# from the environment (.env locally, repository secrets in CI).
+# Checked in on purpose: it contains no secrets, and with DuckDB it needs none. A fresh clone
+# runs against it as-is -- REFARCH_WAREHOUSE only exists so `refarch` can point dbt at a
+# warehouse somewhere other than the default, and the fallback is the path the CLI uses.
+#
+# The path is relative to dbt's working directory, which is this folder.
 refarch:
   target: "{{ env_var('DBT_TARGET', 'dev') }}"
   outputs:
     dev:
-      type: bigquery
-      method: service-account
-      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
-      project: "{{ env_var('GCP_PROJECT') }}"
-      dataset: refarch_dev
-      location: "{{ env_var('BIGQUERY_LOCATION', 'EU') }}"
+      type: duckdb
+      path: "{{ env_var('REFARCH_WAREHOUSE', '../warehouse/refarch.duckdb') }}"
+      schema: refarch_dev
       threads: 8
-      priority: interactive
-      job_execution_timeout_seconds: 300
     prod:
-      type: bigquery
-      method: service-account
-      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
-      project: "{{ env_var('GCP_PROJECT') }}"
-      dataset: refarch
-      location: "{{ env_var('BIGQUERY_LOCATION', 'EU') }}"
+      type: duckdb
+      path: "{{ env_var('REFARCH_WAREHOUSE', '../warehouse/refarch.duckdb') }}"
+      schema: refarch
       threads: 8
-      priority: interactive
-      job_execution_timeout_seconds: 300

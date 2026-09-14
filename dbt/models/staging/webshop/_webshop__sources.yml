@@ -5,7 +5,6 @@ sources:
     description: >
       The webshop's operational database as landed by dlt (dataset raw_webshop). Tables are
       merged on their primary key and carry dlt's _dlt_load_id / _dlt_id lineage columns.
-    database: "{{ env_var('GCP_PROJECT') }}"
     schema: raw_webshop
     loader: dlt
     config:
@@ -14,7 +13,7 @@ sources:
       # pipeline instead of the business dates, which are pinned in the synthetic data.
       # This is rendered at parse time in a restricted context, so it must be literal SQL --
       # a project macro is not visible here.
-      loaded_at_field: "timestamp_seconds(cast(split(_dlt_load_id, '.')[offset(0)] as int64))"
+      loaded_at_field: "to_timestamp(cast(split_part(_dlt_load_id, '.', 1) as bigint))"
       freshness:
         warn_after: { count: 36, period: hour }
         error_after: { count: 72, period: hour }

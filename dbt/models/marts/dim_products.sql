@@ -11,8 +11,8 @@ final as (
         sku,
         -- The source has no product name; the catalogue is described by attributes.
         -- Compose a human name once, here, so every chart labels products the same way.
-        initcap(coffee_origin) || ' · ' || initcap(roast_level) || ' roast · '
-            || initcap(product_category) || ' ' || cast(weight_grams as string) || 'g'
+        {{ title_case('coffee_origin') }} || ' · ' || {{ title_case('roast_level') }} || ' roast · '
+            || {{ title_case('product_category') }} || ' ' || cast(weight_grams as string) || 'g'
             as product_name,
         coffee_origin,
         roast_level,

@@ -3,11 +3,15 @@
 The source is dlt's generic `sql_database` source over a SQLAlchemy URL. Here that URL points
 at the DuckDB file model2data produced; against a real system it would be that Postgres or MySQL,
 and nothing else in this module changes.
+
+The destination is a second DuckDB file playing the warehouse. It is the same one-line swap in
+the other direction: `dlt.destinations.bigquery(...)` or `.snowflake(...)` in place of
+`.duckdb(...)` moves this whole stack onto a cloud warehouse without touching the source, the
+hints below, or a single dbt model.
 """
 
 from __future__ import annotations
 
-import json
 import os
 import warnings
 from pathlib import Path
@@ -56,12 +60,9 @@ def webshop_source(duckdb_path: Path = SOURCE_DUCKDB, schema: str = SOURCE_SCHEM
     return source
 
 
-def bigquery_destination(settings: Settings) -> Any:
-    credentials = json.loads(settings.credentials.read_text())
-    return dlt.destinations.bigquery(
-        credentials=credentials,
-        location=settings.bigquery_location,
-    )
+def duckdb_destination(settings: Settings) -> Any:
+    settings.warehouse_path.parent.mkdir(parents=True, exist_ok=True)
+    return dlt.destinations.duckdb(str(settings.warehouse_path))
 
 
 def build_pipeline(destination: Any, pipelines_dir: Path = DLT_PIPELINES_DIR) -> dlt.Pipeline:
@@ -74,7 +75,7 @@ def build_pipeline(destination: Any, pipelines_dir: Path = DLT_PIPELINES_DIR) ->
 
 
 def run(settings: Settings) -> LoadInfo:
-    pipeline = build_pipeline(bigquery_destination(settings))
+    pipeline = build_pipeline(duckdb_destination(settings))
     info = pipeline.run(webshop_source())
     info.raise_on_failed_jobs()
     return info
