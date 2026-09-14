@@ -116,7 +116,7 @@ page's frontmatter fixes the order; without it Evidence sorts them alphabeticall
 
 | Page | What is on it |
 |---|---|
-| `index.md` | The landing page: who built this, the client it was built for, the problem, and what it demonstrates |
+| `index.md` | The landing page: who built this, the invented business it is built around, the problem, and what it demonstrates |
 | `performance.md` | Net revenue, orders, average order value and cancellation rate; net revenue by month and by channel; order status mix; average days to ship by month |
 | `products.md` | Top ten products by net revenue |
 | `customers.md` | Top twenty customers, and lifetime net revenue by segment |
@@ -129,9 +129,11 @@ publish to Lightdash; `cancellations.md` is new.
 The two pages that are not dashboards are the point of publishing this at all. Most of the
 audience arrives at the URL and never opens this repository, and for them a wall of charts
 argues nothing: the interesting claim is not what the revenue was, it is that the definition
-behind it is written once, tested, and reviewable. `index.md` makes that case and says which
-(fictional) business it was built for; `architecture.md` shows the machinery and is candid about
-where the generated data is thin. A dashboard that will not say where its numbers come from is
+behind it is written once, tested, and reviewable. `index.md` makes that case. It also states in
+its first lines that this is a reference project rather than a client engagement, and that the
+business is invented — the page has to be readable as a demonstration of how the work is done and
+never as a case study about someone real. `architecture.md` shows the machinery and is candid
+about where the generated data is thin. A dashboard that will not say where its numbers come from is
 the thing this whole project is arguing against.
 
 `evidence/sources/refarch/` holds the connection and four thin passthrough queries, one per mart.
