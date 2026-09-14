@@ -52,7 +52,7 @@ final as (
         -- Display labels live in the mart for the same reason the money columns do: a page may
         -- group and sum what the mart defines, but it may not decide what a value is called.
         -- The raw enum stays alongside as the key to filter and join on.
-        {{ title_case('customers.customer_segment') }} as segment_label,
+        {{ sentence_case('customers.customer_segment') }} as segment_label,
         customers.is_marketing_opt_in,
         customers.created_at as customer_since_at,
         customer_orders.first_order_at,

@@ -7,7 +7,8 @@ og:
   image: /og.png
 ---
 
-Every number on this site is built from a synthetic source database by four commands, with no
+Every number on this site is built from a synthetic source database by two commands
+(`uv sync --extra dev`, then `uv run refarch run --target prod`), in four stages, with no
 account, no credentials and no server. This page is the short version; the long version is
 [`docs/architecture/README.md`](https://github.com/JB-Analytica/reference-architecture/blob/main/docs/architecture/README.md)
 in the repository.
@@ -43,8 +44,8 @@ A page here may group and sum those columns; it may not redefine them.
 
 Display names fall on the mart side of that line too. The source stores its enums lowercase and
 snake_cased — `mobile_app`, `light`, `cancelled` — and each mart carries a label column beside the
-raw one, so `Mobile App` is decided in `fct_orders` and read by every chart that shows it. A page
-that title-cased its own axis labels would be redefining a value in precisely the way the boundary
+raw one, so `Mobile app` is decided in `fct_orders` and read by every chart that shows it. A page
+that cased its own axis labels would be redefining a value in precisely the way the boundary
 exists to prevent, and two pages would eventually disagree about what to call the same thing. The
 raw enum stays in the mart as the key to filter and join on; the label is what gets drawn.
 

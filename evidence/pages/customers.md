@@ -56,7 +56,7 @@ order by net_revenue_eur desc
     title="Lifetime net revenue by customer segment"
 />
 
-Both queries filter on `has_ordered`, which is also a mart column rather than a condition this
-page invents: 79 of the 600 customers have never placed an order. That is not a gap in the data —
+The table and the chart above both filter on `has_ordered`, which is a mart column rather than a
+condition this page invents: 79 of the 600 customers have never placed an order. That is not a gap in the data —
 it is what a customer table looks like, and [Architecture](/architecture) explains why the
 generator was left alone to produce it.

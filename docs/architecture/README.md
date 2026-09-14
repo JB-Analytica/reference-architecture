@@ -79,8 +79,10 @@ that wants net revenue writes its own `sum(net_amount_eur)`.
 **Display labels are part of that definition.** The source stores its enums lowercase and
 snake_cased -- `mobile_app`, `light`, `cancelled` -- and each mart carries a `*_label` column
 beside the raw one (`channel_label`, `roast_label`, `segment_label`, and so on), composed by the
-`title_case` macro. Charts and tables read the label; filters and joins read the raw key. The
-alternative is each page title-casing its own axis labels, which is a page redefining a value in
+`sentence_case` macro -- sentence case, because the rest of the site writes "Webshop
+performance" and not "Webshop Performance". Charts and tables read the label; filters and joins
+read the raw key. The alternative is each page casing its own axis labels, which is a page
+redefining a value in
 exactly the way the `bi` boundary exists to prevent -- and two pages eventually disagreeing about
 what to call the same thing. `_marts__models.yml` declares each pairing as `meta.display_label`
 and `tests/test_report.py` reads those declarations, so a page pointing `x=` or `id=` at a raw
@@ -108,12 +110,28 @@ The source stores money in integer cents, which is right for an operational data
 for a chart axis. The `cents_to_eur` macro converts exactly once, at the mart boundary. No
 model downstream of that sees cents, and no chart divides by 100.
 
+**Euros are DECIMAL, and the conversion never goes through a float.** Every figure on the report
+is an exact number of cents, so none of it has any business being approximate -- but the macro
+used to return `round(cents / 100, 2)`, which is a DOUBLE. Exact per row; not exact once summed,
+because floating point addition is not associative and a total therefore depends on the order the
+rows happen to be read in. That order is a property of the table, not of the data. Honduras
+medium roast beans total exactly 9313.50 euro of realised revenue; adding an unrelated label
+column to `fct_order_items` changed the physical row order, the same sum came out as
+9313.499999999998 rather than 9313.50000000001, and the published figure moved from 9,314 to
+9,313 while nothing about the money had changed.
+
+`dbt/tests/assert_money_is_exact.sql` reads the warehouse's column types and fails if any mart
+`*_eur` column is floating point. It deliberately checks the type rather than comparing values:
+exactly one figure in this dataset sits on a boundary, and a test that only fires when a total
+happens to land on a half cent is a test that passes for years and then does not.
+
 ## Dialect ports
 
 Moving the warehouse off BigQuery meant porting a few pieces of SQL rather than just the
-connection. `dbt/macros/title_case.sql` exists because DuckDB has no `initcap`: it splits each
-value on spaces and capitalises the first character of each word, mirroring what BigQuery gave
-for free. `fct_orders.sql` uses `date_diff('hour', ...)` in place of BigQuery's
+connection. `dbt/macros/sentence_case.sql` exists because DuckDB has no `initcap`: it
+replaces underscores with spaces and capitalises the first character, which is what this site's
+labels need -- BigQuery's `initcap` capitalises every word, which is not what we want here
+anyway. `fct_orders.sql` uses `date_diff('hour', ...)` in place of BigQuery's
 `timestamp_diff`, and the sources YAML's `loaded_at_field` was rewritten for DuckDB's timestamp
 functions — it stays literal SQL either way, for the reason in the runbook.
 

@@ -50,7 +50,7 @@ models:
       - name: order_status_label
         description: order_status as a display label, e.g. Delivered. The report charts this.
       - name: channel_label
-        description: sales_channel as a display label, e.g. Mobile App. The report charts this.
+        description: sales_channel as a display label, e.g. Mobile app. The report charts this.
       - name: shipping_city
         description: City the order shipped to.
       - name: shipping_country
@@ -134,7 +134,7 @@ models:
       - name: order_status_label
         description: order_status as a display label, e.g. Delivered. The report charts this.
       - name: channel_label
-        description: sales_channel as a display label, e.g. Mobile App. The report charts this.
+        description: sales_channel as a display label, e.g. Mobile app. The report charts this.
       - name: quantity
         description: Units of this product on the line.
         data_tests: [not_null]

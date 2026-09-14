@@ -13,9 +13,9 @@ labelled as (
     -- one definition, not two that can drift apart.
     select
         *,
-        {{ title_case('coffee_origin') }} as origin_label,
-        {{ title_case('roast_level') }} as roast_label,
-        {{ title_case('product_category') }} as category_label
+        {{ sentence_case('coffee_origin') }} as origin_label,
+        {{ sentence_case('roast_level') }} as roast_label,
+        {{ sentence_case('product_category') }} as category_label
     from products
 
 ),
