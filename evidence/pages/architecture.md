@@ -1,5 +1,6 @@
 ---
 title: Architecture
+sidebar_position: 5
 ---
 
 Every number on this site is built from a synthetic source database by four commands, with no

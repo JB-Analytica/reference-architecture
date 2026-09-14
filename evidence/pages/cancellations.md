@@ -1,5 +1,6 @@
 ---
 title: Cancellations
+sidebar_position: 4
 ---
 
 Every figure here is the gap between two columns on `fct_orders`: `net_amount_eur`, the order as
