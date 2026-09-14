@@ -76,6 +76,16 @@ still in git and still reviewed in the same pull request as everything else, but
 longer a single declarative place a metric is defined once and reused everywhere; a second page
 that wants net revenue writes its own `sum(net_amount_eur)`.
 
+**Display labels are part of that definition.** The source stores its enums lowercase and
+snake_cased -- `mobile_app`, `light`, `cancelled` -- and each mart carries a `*_label` column
+beside the raw one (`channel_label`, `roast_label`, `segment_label`, and so on), composed by the
+`title_case` macro. Charts and tables read the label; filters and joins read the raw key. The
+alternative is each page title-casing its own axis labels, which is a page redefining a value in
+exactly the way the `bi` boundary exists to prevent -- and two pages eventually disagreeing about
+what to call the same thing. `_marts__models.yml` declares each pairing as `meta.display_label`
+and `tests/test_report.py` reads those declarations, so a page pointing `x=` or `id=` at a raw
+enum fails the build rather than the review.
+
 The report says a short version of all this to its own readers, on its `architecture` page
 (`evidence/pages/architecture.md`) — someone who opens the published site never sees this file.
 The two have to agree; this one is the source.

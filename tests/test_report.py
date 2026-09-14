@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import re
 
-from refarch.config import EVIDENCE_DIR
+import yaml
+
+from refarch.config import DBT_DIR, EVIDENCE_DIR
 
 PAGES = EVIDENCE_DIR / "pages"
 STATIC = EVIDENCE_DIR / "static"
@@ -86,3 +88,68 @@ def test_no_value_component_is_followed_by_punctuation() -> None:
                 f"{page.name}:{number} follows a <Value> with {match.group()[-1]!r}, which "
                 "renders a space before it. Reword so a word follows the value."
             )
+
+
+def _frontmatter(page) -> dict:
+    """The page's YAML frontmatter. Evidence reads the same block for its head tags."""
+    text = page.read_text()
+    assert text.startswith("---\n"), f"{page.name} has no frontmatter"
+    return yaml.safe_load(text.split("---", 2)[1])
+
+
+def test_every_page_has_a_description() -> None:
+    """Without one, a share of the page renders as a title over an empty grey box.
+
+    Evidence only emits `description`, `og:description` and `twitter:description` when the
+    frontmatter carries a description -- and it emits nothing at all, rather than warning, when
+    it does not. This site exists to be linked to, so a page without one is a broken share.
+    """
+    for page in _markdown_pages():
+        description = _frontmatter(page).get("description", "")
+        assert description.strip(), (
+            f"{page.name} has no frontmatter `description`; sharing it renders an empty card."
+        )
+
+
+def test_every_og_image_exists() -> None:
+    """The social card is an asset like any other, and 404s just as silently."""
+    for page in _markdown_pages():
+        image = (_frontmatter(page).get("og") or {}).get("image")
+        assert image, f"{page.name} has no og.image, so a share of it carries no card image"
+        assert (STATIC / image.lstrip("/")).exists(), (
+            f"{page.name} points og.image at {image}, which is not in {STATIC}"
+        )
+
+
+def test_no_page_charts_a_raw_enum_column() -> None:
+    """A chart axis or table column must name a mart's label column, not its raw key.
+
+    The marts are the semantic layer, and what a value is *called* is part of its definition --
+    so `dim_products` carries `roast_label` beside `roast_level` and the page selects the label.
+    Point a chart at the raw column and the site shows `mobile_app` to a business reader while
+    claiming on /architecture that it does no such thing.
+
+    The protected set is not listed here. Each raw enum in the marts schema declares the label
+    column that stands in for it (`meta.display_label`), so adding an enum protects it on the
+    same line that documents it, and a pairing that names a column which does not exist fails
+    too -- a typo there would otherwise switch the check off silently for that column.
+    """
+    schema = yaml.safe_load((DBT_DIR / "models" / "marts" / "_marts__models.yml").read_text())
+    protected, defined = {}, set()
+    for model in schema["models"]:
+        for column in model.get("columns", []):
+            defined.add(column["name"])
+            label = (column.get("meta") or {}).get("display_label")
+            if label:
+                protected[column["name"]] = label
+    assert protected, "no meta.display_label pairings found; the marts schema changed shape"
+    missing = {raw: label for raw, label in protected.items() if label not in defined}
+    assert not missing, f"display_label names a column that no mart defines: {missing}"
+
+    for page in _markdown_pages():
+        for number, line in enumerate(page.read_text().splitlines(), start=1):
+            for column in re.findall(r"\b(?:x|id)=(\w+)", line):
+                assert column not in protected, (
+                    f"{page.name}:{number} renders the raw enum {column!r}. Chart "
+                    f"{protected[column]!r} instead -- see docs/architecture/README.md."
+                )

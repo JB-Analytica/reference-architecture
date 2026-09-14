@@ -55,6 +55,29 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   follow, and nothing may read as a client engagement or a case study — this is a reference
   project, the webshop does not exist, and the page says both in its opening lines. Page order is
   set by `sidebar_position` frontmatter, not by filename.
+- **Display labels are mart columns, never page-side formatting.** Each raw enum in the marts
+  carries a `*_label` column beside it (`channel_label`, `roast_label`, `segment_label`, …) and
+  declares the pairing in `_marts__models.yml` as `meta.display_label`. A chart or table names
+  the label; filters and joins name the raw key. `tests/test_report.py` reads those pairings and
+  fails if a page points `x=` or `id=` at a raw enum, so adding an enum protects it on the same
+  line that documents it. The `title_case` macro replaces underscores as well as capitalising --
+  without that, `mobile_app` renders as `Mobile_app`.
+- **The built `<head>` is finished by `refarch/seo.py`, after Evidence.** Per-page copy
+  (`description`, `og.title`, `og.image`) is frontmatter and belongs with the page; absolute
+  URLs, the site-wide og tags, the removal of Evidence's `@evidence_dev` `twitter:site` default,
+  `robots.txt` and `sitemap.xml` are all done post-build, because Evidence has no configuration
+  for any of them. Do not fix this by patching `@evidence-dev/preprocess` in `node_modules`:
+  it is not committed, and `npm ci` silently drops the patch while the build keeps succeeding.
+  Evidence's `twitter:site` is stripped and `@JBAnalytica` added in `_head_additions` rather than
+  edited in place, so the right handle still ships if Evidence stops emitting the tag.
+- **Every page carries the provenance line and the footer** from `evidence/pages/+layout.svelte`.
+  A reader arriving on one deep page from a shared link must be able to see whose site it is,
+  that the data is invented, and how to make contact, without navigating. Do not move either
+  into an individual page.
+- **`evidence/static/og.png` is an export of `docs/img/og-card.html`**, the same arrangement as
+  the architecture diagram: edit the HTML and re-render, never the PNG. Render it with Playwright
+  at a 1200x630 viewport and `device_scale_factor=1`. It carries the booked and realised revenue
+  figures, so it is a third place concrete numbers live -- re-export if a run ever moves them.
 - **The report explains itself on `evidence/pages/architecture.md`**, for readers who see the
   published site and never the repo. It has to stay in step with `docs/architecture/README.md`,
   which is the source of the two.
@@ -69,8 +92,10 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   a web root), and capture `/performance` with Playwright at a 1440x900 viewport and
   `device_scale_factor=1` — viewport only, not `full_page`. Keep it under 500 KB or
   `check-added-large-files` blocks the commit.
-- **Concrete run figures (node counts, revenue totals) live in two places only** — the README's
-  "What success looks like" and `docs/versions.md`. They were previously repeated in the diagram
+- **Concrete run figures (node counts, revenue totals) live in three places only** — the README's
+  "What success looks like", `docs/versions.md`, and the social card `docs/img/og-card.html`. The
+  report's own pages query them live and never hardcode one; the home page's "about 43 seconds"
+  is the one timing claim and the README carries the same figure. They were previously repeated in the diagram
   and elsewhere and had drifted everywhere. Re-measure rather than copy.
 - **Brand values come from the website, never from judgement.** The colours in
   `evidence.config.yaml`, the `@font-face` block in `evidence/app.css` and the assets in

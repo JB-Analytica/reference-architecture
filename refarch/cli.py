@@ -13,6 +13,7 @@ from pathlib import Path
 import typer
 
 from refarch import generate as generate_stage
+from refarch import seo
 from refarch.config import (
     DBT_DIR,
     EVIDENCE_CONFIG,
@@ -214,6 +215,11 @@ def report(
         help="Build for a site served under this path, e.g. /reference-architecture for "
         "GitHub Pages. Must start with '/'.",
     ),
+    site_url: str = typer.Option(
+        seo.SITE_URL,
+        help="Origin the report will be served from. Only the canonical, og:url and sitemap "
+        "entries use it -- they have to be absolute, and nothing in the build knows the host.",
+    ),
 ) -> None:
     """Stage 4 -- build the Evidence report over the warehouse (static site in evidence/build)."""
     if base_path and not base_path.startswith("/"):
@@ -234,6 +240,17 @@ def report(
             _run([npm, "run", "dev"], cwd=EVIDENCE_DIR, env=env)
             return
         _run([npm, "run", "build"], cwd=EVIDENCE_DIR, env=env)
+    # Evidence cannot express absolute URLs, site-wide og tags, or the removal of its own
+    # twitter:site default, so the built head is finished here. See refarch/seo.py.
+    # An empty --site-url means the caller had nothing to offer (actions/configure-pages does
+    # not always resolve an origin), not that the site has no host. Fall back rather than
+    # writing a canonical URL with no scheme, which is worse than not writing one at all.
+    origin = site_url.strip() or seo.SITE_URL
+    routes = seo.finalise(EVIDENCE_DIR / "build", site_url=origin, base_path=base_path)
+    typer.secho(
+        f"Head, robots.txt and sitemap.xml written for {len(routes)} pages at {origin}.",
+        fg=typer.colors.BLUE,
+    )
     typer.secho(
         f"Report built into {EVIDENCE_DIR / 'build'}. Serve it with `npm run preview` from "
         "evidence/ -- its asset URLs are absolute from the site root, so opening index.html "
@@ -248,6 +265,7 @@ def run(
     skip_generate: bool = typer.Option(False, help="Reuse the existing generated source system."),
     skip_report: bool = typer.Option(False, help="Stop after dbt; do not build the report."),
     base_path: str | None = typer.Option(None, help="Passed through to `refarch report`."),
+    site_url: str = typer.Option(seo.SITE_URL, help="Passed through to `refarch report`."),
 ) -> None:
     """Run every stage in order: generate -> load -> transform -> report."""
     if not skip_generate:
@@ -255,7 +273,7 @@ def run(
     load()
     _run(["dbt", "build"], cwd=DBT_DIR, env=_dbt_env(target))
     if not skip_report:
-        report(dev=False, base_path=base_path)
+        report(dev=False, base_path=base_path, site_url=site_url)
     typer.secho(
         f"Full run complete. The warehouse is {settings().warehouse_path}.",
         fg=typer.colors.GREEN,

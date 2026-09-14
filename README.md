@@ -122,8 +122,8 @@ page's frontmatter fixes the order; without it Evidence sorts them alphabeticall
 |---|---|
 | `index.md` | The landing page: who built this, the invented business it is built around, the problem, and what it demonstrates |
 | `performance.md` | Net revenue, orders, average order value and cancellation rate; net revenue by month and by channel; order status mix; average days to ship by month |
-| `products.md` | Top ten products by net revenue |
-| `customers.md` | Top twenty customers, and lifetime net revenue by segment |
+| `products.md` | Top ten products by net revenue -- the same realised revenue column as `performance.md`, one grain down |
+| `customers.md` | Top twenty customers, and lifetime net revenue by segment -- the same column again, per customer and all time |
 | `cancellations.md` | Rate and lost revenue over time, by channel and by product |
 | `architecture.md` | The stack, the seam, and what the synthetic data cannot tell you |
 
@@ -196,6 +196,36 @@ Three files carry it: `evidence.config.yaml` (colour), `evidence/app.css` (type)
 the header. What is not themed is Evidence's layout chrome — the sidebar, the spacing, the
 table and chart furniture are Evidence's, and the brand sits on top of them rather than replacing
 them.
+
+### Findable and shareable
+
+The report exists to be linked to, so the built `<head>` has to carry more than Evidence puts
+there. Frontmatter covers the per-page copy -- `description` and `og.title` on every page, and
+`og.image` pointing at the card in `evidence/static/og.png` (its source is
+`docs/img/og-card.html`). The rest is finished after the build by `refarch/seo.py`, which
+`refarch report` calls:
+
+- **Absolute URLs.** `og:image`, `og:url` and `<link rel="canonical">` have to carry a host, and
+  nothing inside the build knows what host it will be served from. `--site-url` supplies it, and
+  `pages.yml` passes what `actions/configure-pages` reports rather than hardcoding a domain.
+- **Site-wide tags.** `og:site_name`, `og:type`, `og:locale` and the image alt text, which would
+  otherwise be repeated in six frontmatter blocks.
+- **`twitter:site`.** Evidence hardcodes `@evidence_dev` with no config for it, so every share
+  of this site was attributed to the framework. Its tag is stripped and
+  [`@JBAnalytica`](https://x.com/JBAnalytica) written in its place, along with `twitter:creator`.
+- **`robots.txt` and `sitemap.xml`,** which both 404'd until this step existed.
+
+Rewriting built HTML is a real cost: it runs after the framework and has to be kept in step with
+it. It is done there rather than by patching `@evidence-dev/preprocess` in `node_modules`,
+because `node_modules` is not committed and `npm ci` would drop the patch on the next clean run --
+the report would keep building and quietly go back to being wrong. `tests/test_seo.py` pins the
+behaviour against a fixture of the head Evidence actually emits.
+
+Every page also ends in a footer, and opens with a one-line note, saying that this is a JB
+Analytica reference project and that the data is invented. Both live in
+`evidence/pages/+layout.svelte`, because someone who arrives on `/cancellations` from a shared
+link has to be able to tell whose site it is and that none of it is real without navigating
+anywhere.
 
 ### Published
 

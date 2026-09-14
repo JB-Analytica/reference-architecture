@@ -32,17 +32,25 @@ models:
       - name: order_date
         description: Date the order was placed.
       - name: order_status
+        meta:
+          display_label: order_status_label
         description: pending, paid, shipped, delivered or cancelled.
         data_tests:
           - accepted_values:
               arguments:
                 values: [pending, paid, shipped, delivered, cancelled]
       - name: sales_channel
+        meta:
+          display_label: channel_label
         description: Where the order came from.
         data_tests:
           - accepted_values:
               arguments:
                 values: [web, mobile_app, marketplace, store]
+      - name: order_status_label
+        description: order_status as a display label, e.g. Delivered. The report charts this.
+      - name: channel_label
+        description: sales_channel as a display label, e.g. Mobile App. The report charts this.
       - name: shipping_city
         description: City the order shipped to.
       - name: shipping_country
@@ -116,9 +124,17 @@ models:
       - name: ordered_at
         description: When the parent order was placed.
       - name: order_status
+        meta:
+          display_label: order_status_label
         description: Status of the parent order.
       - name: sales_channel
+        meta:
+          display_label: channel_label
         description: Channel of the parent order.
+      - name: order_status_label
+        description: order_status as a display label, e.g. Delivered. The report charts this.
+      - name: channel_label
+        description: sales_channel as a display label, e.g. Mobile App. The report charts this.
       - name: quantity
         description: Units of this product on the line.
         data_tests: [not_null]
@@ -160,11 +176,15 @@ models:
       - name: country
         description: Customer's home country.
       - name: customer_segment
+        meta:
+          display_label: segment_label
         description: consumer or business.
         data_tests:
           - accepted_values:
               arguments:
                 values: [consumer, business]
+      - name: segment_label
+        description: customer_segment as a display label, e.g. Business. The report charts this.
       - name: is_marketing_opt_in
         description: Whether the customer accepted marketing email.
       - name: customer_since_at
@@ -194,15 +214,27 @@ models:
       - name: product_name
         description: Human-readable name composed from origin, roast, category and weight.
       - name: coffee_origin
+        meta:
+          display_label: origin_label
         description: Country the beans come from.
       - name: roast_level
+        meta:
+          display_label: roast_label
         description: light, medium or dark.
       - name: product_category
+        meta:
+          display_label: category_label
         description: beans, ground, capsules or equipment.
         data_tests:
           - accepted_values:
               arguments:
                 values: [beans, ground, capsules, equipment]
+      - name: origin_label
+        description: coffee_origin as a display label, e.g. Rwanda. The report charts this.
+      - name: roast_label
+        description: roast_level as a display label, e.g. Medium. The report charts this.
+      - name: category_label
+        description: product_category as a display label, e.g. Capsules. The report charts this.
       - name: weight_grams
         description: Pack weight in grams.
       - name: unit_price_eur

@@ -1,6 +1,10 @@
 ---
 title: Webshop performance
 sidebar_position: 1
+description: The trading year of an invented coffee webshop, where every figure on the page is a column defined in a dbt mart and reviewed in a pull request.
+og:
+  title: Webshop performance · JB Analytica Reference Architecture
+  image: /og.png
 ---
 
 The webshop's trading year. Every number here is a column defined in a dbt mart and reviewed in
@@ -68,7 +72,7 @@ would.
 
 ```sql revenue_by_channel
 select
-    sales_channel,
+    channel_label,
     sum(realised_net_amount_eur) as net_revenue_eur,
     count(distinct order_id)     as order_count
 from refarch.orders
@@ -78,16 +82,20 @@ order by net_revenue_eur desc
 
 <BarChart
     data={revenue_by_channel}
-    x=sales_channel
+    x=channel_label
     y=net_revenue_eur
     yFmt=eur0
     swapXY=true
+    yAxisLabels=false
+    labels=true
+    labelPosition=outside
+    yMax=200000
     title="Net revenue by channel"
 />
 
 ```sql order_status_mix
 select
-    order_status,
+    order_status_label,
     count(distinct order_id) as order_count
 from refarch.orders
 group by 1
@@ -96,9 +104,14 @@ order by order_count desc
 
 <BarChart
     data={order_status_mix}
-    x=order_status
+    x=order_status_label
     y=order_count
     yFmt=num0
+    swapXY=true
+    yAxisLabels=false
+    labels=true
+    labelPosition=outside
+    yMax=3200
     title="Order status mix"
     subtitle="Every order, by the status it is in now"
 />

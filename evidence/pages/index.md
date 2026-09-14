@@ -1,5 +1,8 @@
 ---
 title: A data platform you can read, trust and build on
+description: A complete data platform — source system, ingestion, warehouse, semantic layer and report — published with every line of its source and runnable on a laptop with no account.
+og:
+  image: /og.png
 ---
 
 [JB Analytica](https://www.jbanalytica.com/) is a data architecture and analytics engineering
@@ -62,9 +65,9 @@ it lives. It is fixable one layer down, by defining the number once.
 
 ## How it is built
 
-Four stages, run by four commands, from a data model to a published report:
+Four stages, from a data model to a published report:
 
-| | | |
+| Stage | What happens | Tool |
 |---|---|---|
 | **1. Model the source** | A data model in DBML becomes a running database with realistic, relationship-preserving data — so the platform can be built and demonstrated before anyone has production access | `model2data` |
 | **2. Ingest** | Incremental extraction that merges on the primary key, so re-running never duplicates a row | `dlt` |
@@ -98,9 +101,19 @@ moves onto a production database and BigQuery or Snowflake without a single mode
 Growth gets absorbed rather than triggering a rebuild, which is the difference between a platform
 and a prototype.
 
-**It runs with no account at all.** Clone it, run four commands, and the whole platform builds on
-a laptop — no cloud project, no credentials, no bill. That is not a demo trick. It is what lets
-an architecture be reviewed and argued with before anyone commits to buying it.
+**It runs with no account at all.** Two commands, and the whole platform builds on a laptop:
+
+```bash
+uv sync --extra dev
+uv run refarch run --target prod
+```
+
+That is a clean clone to a generated source database, a loaded warehouse, a tested dbt project
+and this report, in about 43 seconds. What you need installed first is
+[uv](https://docs.astral.sh/uv/), and Node 18 or newer for the report stage — the other three
+stages run on `uv` alone. Beyond that there is nothing: no cloud project, no credentials, no
+`.env` to fill in, no bill. That is not a demo trick. It is what lets an architecture be reviewed
+and argued with before anyone commits to buying it.
 
 ## Where to look next
 

@@ -1,6 +1,10 @@
 ---
 title: Cancellations
 sidebar_position: 4
+description: Five percent of orders get cancelled, and whether that counts as revenue is the disagreement this whole project exists to settle.
+og:
+  title: Cancellations · JB Analytica Reference Architecture
+  image: /og.png
 ---
 
 Every figure here is the gap between two columns on `fct_orders`: `net_amount_eur`, the order as
@@ -20,10 +24,10 @@ select
 from refarch.orders
 ```
 
-<BigValue data={summary} value=cancellation_rate title="Cancellation rate" fmt=pct1 />
+<BigValue data={summary} value=cancellation_rate title="Cancellation rate" fmt=pct2 />
 <BigValue data={summary} value=cancelled_orders title="Cancelled orders" fmt=num0 />
 <BigValue data={summary} value=revenue_lost_eur title="Revenue lost" fmt=eur0 />
-<BigValue data={summary} value=revenue_lost_share title="Share of booked revenue" fmt=pct1 />
+<BigValue data={summary} value=revenue_lost_share title="Share of booked revenue" fmt=pct2 />
 
 The order rate and the revenue share are close but not identical, and the difference is the
 useful part: when they diverge, cancellations are landing on orders that are bigger or smaller
@@ -71,7 +75,7 @@ has been tested against a real spike.
 
 ```sql by_channel
 select
-    sales_channel,
+    channel_label,
     count(distinct order_id)                             as order_count,
     count(distinct order_id) filter (where is_cancelled)
         / nullif(count(distinct order_id), 0)::double    as cancellation_rate,
@@ -83,7 +87,7 @@ order by cancellation_rate desc
 
 <BarChart
     data={by_channel}
-    x=sales_channel
+    x=channel_label
     y=cancellation_rate
     yFmt=pct1
     swapXY=true
@@ -91,7 +95,7 @@ order by cancellation_rate desc
 />
 
 <DataTable data={by_channel}>
-    <Column id=sales_channel title="Channel" />
+    <Column id=channel_label title="Channel" />
     <Column id=order_count title="Orders" fmt=num0 />
     <Column id=cancellation_rate title="Cancellation rate" fmt=pct1 />
     <Column id=revenue_lost_eur title="Revenue lost" fmt=eur0 contentType=bar barColor="#A8C9EE" />
