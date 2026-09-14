@@ -5,12 +5,7 @@ no account and no credentials. Only the report stage needs anything beyond `uv` 
 [What you need first](#what-you-need-first). It points at a real warehouse by changing one
 connection string.
 
-![The reference architecture: two interchangeable sources meeting at one swap point, then dlt, BigQuery, dbt and Lightdash](docs/architecture/diagram.svg)
-
-*The diagram above still shows the BigQuery/Lightdash version of this stack — it has not been
-redrawn for the move to DuckDB and Evidence (see
-[docs/architecture/README.md](docs/architecture/README.md)). The running code is now
-`model2data` → `dlt` → DuckDB → `dbt` → `Evidence`.*
+![Four stages left to right — a synthetic source system, dlt, a DuckDB warehouse file, dbt, and an Evidence report published to GitHub Pages — with two dashed seams either side of dlt marking the only swap points](docs/architecture/diagram.svg)
 
 `model2data` → `dlt` → DuckDB → `dbt` → `Evidence`. Every layer is real and every layer runs;
 nothing here is a sketch of how it would work. The stack ends at a static report you can open in

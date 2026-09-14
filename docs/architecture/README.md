@@ -1,7 +1,6 @@
 # How the pieces fit
 
-The diagram below (and the SVG/PNG further down this page) predates this move and still shows
-BigQuery and Lightdash, not DuckDB and Evidence. The stack that actually runs today:
+The stack that runs today, in text; the drawing at the bottom of this page says the same thing:
 
 ```
 source_system/webshop.dbml
@@ -88,33 +87,24 @@ functions — it stays literal SQL either way, for the reason in the runbook.
 
 ## The diagram
 
-**Stale.** `diagram.svg`, `diagram.png`, `diagram-v2.png` and `diagram-v2.html` below still show
-the BigQuery/Lightdash version of this stack and have not been regenerated for the move to
-DuckDB, nor for the addition of Evidence as the fourth stage. They are kept as a record of the
-previous architecture rather than removed; treat the "How the pieces fit" diagram above this
-section as the current one.
-
 ![Reference architecture](diagram.svg)
 
-Source: [`diagram.svg`](diagram.svg), sized to the 1600×900 diagram canvas in the
-JB Analytica design system, using the chart *marks* palette for the distinct stages and a single
-amber accent for the swap point. [`diagram.png`](diagram.png) is a raster export
-for slides and social.
+`diagram.html` is the source; `diagram.svg` and `diagram.png` are exports of the `<svg>` node
+alone, made with the `diagram-design` skill's export procedure. Regenerate them from the HTML
+rather than editing either by hand.
 
-The SVG names Poppins and JetBrains Mono with the design system's documented fallbacks, so it
-renders correctly in a browser and degrades to Helvetica where those fonts are not installed —
-which is what the committed PNG shows. Install the two fonts locally if you need a raster export
-in the brand faces.
+What it argues: four stages, and **two seams either side of `dlt`**. That is the honest shape of
+this repo's portability claim — `dlt` is the one component with both a replaceable input and a
+replaceable output, so pointing the stack at a production database or a cloud warehouse means
+changing those two things and nothing else. Accent is spent on the seams and nowhere else,
+because they are the whole point of the drawing.
 
-### Two versions
+The fonts are embedded in the HTML as base64 woff2 — Poppins 400/600/700 and JetBrains Mono 400,
+the only faces the diagram uses. That keeps the file self-contained: it renders in brand offline,
+inside the PNG export, and without a call to a font CDN, which is the same stance the report
+takes. The export carries those `@font-face` rules into the SVG's own `<defs>`, so the standalone
+SVG does not substitute typography either.
 
-`diagram.svg` is hand-authored: navy ground, the four stages as numbered boxes, the story
-carried by a full-height amber seam. `diagram-v2.html` is the same argument redrawn through
-the `diagram-design` skill against a saved JB Analytica profile — light editorial ground,
-orthogonal elbow connectors, masked arrow labels, a bottom legend strip and a `<title>`/`<desc>`
-accessibility contract. The skill's geometry and render linters both pass on it.
-
-The v2 file was drawn with the [diagram-design](https://github.com/factory-ai/diagram-design)
-skill against a JB Analytica colour profile. That profile is not committed here, so regenerating
-it elsewhere falls back to the skill's own palette; the committed HTML already carries the
-brand values inline.
+The earlier hand-authored navy version and the `diagram-v2.*` pair are gone rather than kept as
+a stale record: two diagrams of the same system, one of them wrong, is worse than one that is
+right. Both are in the git history.

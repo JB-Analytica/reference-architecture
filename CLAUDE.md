@@ -38,6 +38,10 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   it — see `docs/architecture/README.md`.
 - **Evidence source queries are thin.** `evidence/sources/refarch/*.sql` select from a mart and
   nothing else. Logic there is invisible to dbt's tests and lineage.
+- **`docs/architecture/diagram.html` is the source of the diagram**; `diagram.svg` and
+  `diagram.png` are exports of its `<svg>` node. Edit the HTML and re-export with the
+  `diagram-design` skill — never hand-edit the SVG or the PNG, and never let the drawing and the
+  prose in `docs/architecture/README.md` disagree.
 - **Brand values come from the website, never from judgement.** The colours in
   `evidence.config.yaml`, the `@font-face` block in `evidence/app.css` and the assets in
   `evidence/static/` all trace to `JB-Analytica/jba-website` (`assets/css/style.css`,
