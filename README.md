@@ -103,9 +103,10 @@ the browser query that parquet directly. A reader can see the dashboards without
 running anything, which the other two candidates cannot do. That is why there is a live link at
 the top of this file.
 
-The stack used to end at Lightdash, which has no DuckDB connector and so could not make the move
-off BigQuery; it went along with `refarch/lightdash_api.py`, the `lightdash/` directory and the
-`deploy` command. What that trade cost is spelled out under [Revenue](#revenue) below.
+An earlier version of this stack ran on BigQuery and ended at Lightdash. Lightdash has no DuckDB
+connector, so it could not follow the warehouse onto a local file, and moving to something that
+could was the price of the repo running with no account at all. That trade was not free, and what
+it cost is spelled out under [Revenue](#revenue) below.
 
 The report lives in `evidence/`, and `evidence/pages/` holds five:
 

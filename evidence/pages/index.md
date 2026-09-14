@@ -2,10 +2,10 @@
 title: Webshop performance
 ---
 
-The nine figures this stack used to publish to Lightdash, rebuilt as code, plus a
-[cancellations](/cancellations) page the Lightdash version never had. Every number
-below comes from the dbt marts in `warehouse/refarch.duckdb` — nothing is computed in a UI, and
-nothing is stored anywhere a pull request cannot see it.
+A webshop's trading year, read off a warehouse built from scratch by four commands. Every number
+below is a column defined in a dbt mart and reviewed in a pull request — nothing is computed in a
+BI tool, and nothing is stored anywhere a code review cannot see it.
+[Architecture](/architecture) says how it is built, and where this data is thinner than it looks.
 
 ```sql headline
 select

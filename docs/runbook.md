@@ -81,8 +81,11 @@ on €0. Counts need their own evidence.
 `accepted_values` all held while `fct_order_items.net_amount_eur` was a hundred times too large:
 each row was individually plausible. What catches that class of bug is comparing two numbers
 computed independently by different models, which is what
-`dbt/tests/assert_marts_reconcile.sql` does. It has been verified by reintroducing the old macro
-and watching it fail -- a regression test nobody has seen fail is not yet a test.
+`dbt/tests/assert_marts_reconcile.sql` does. It has been watched to fail, which is the only
+thing that makes it a test: drop the inner parentheses from `cents_to_eur`, run
+`refarch transform --target prod`, and it goes red on `fct_orders vs fct_order_items (booked)`
+with 3,564 rows (the realised-revenue test fails alongside it). Put the parentheses back. A
+regression test nobody has seen fail is not yet a test, so do that again after changing either.
 
 **Booked and realised revenue are different columns, on purpose.** `net_amount_eur` is the order
 as placed; `realised_net_amount_eur` is zero when the order was cancelled. Sum the realised one

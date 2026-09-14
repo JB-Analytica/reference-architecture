@@ -120,6 +120,6 @@ inside the PNG export, and without a call to a font CDN, which is the same stanc
 takes. The export carries those `@font-face` rules into the SVG's own `<defs>`, so the standalone
 SVG does not substitute typography either.
 
-The earlier hand-authored navy version and the `diagram-v2.*` pair are gone rather than kept as
-a stale record: two diagrams of the same system, one of them wrong, is worse than one that is
-right. Both are in the git history.
+There is deliberately only one diagram. Earlier drafts were deleted rather than parked beside
+this one: two drawings of the same system, one of them out of date, is worse than one that is
+right, and a reader has no way to tell which is which.
