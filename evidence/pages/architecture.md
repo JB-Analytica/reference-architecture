@@ -61,10 +61,16 @@ The source is generated, not observed, and it is worth knowing where that shows:
 - **Nothing here has been tested against a spike.** The series are smooth by construction: there
   is a trend and an annual cycle, but no Black Friday, no outage, no viral week.
 
-These are limits of the generator, not choices made here, and only the second can be dulled by
-configuration — doubling the lines per order takes it from 10.9% to 1.5%, at the cost of a basket
-size no coffee shop has. Fixing any of them properly means teaching
-[model2data](https://github.com/JB-Analytica/model2data) to guarantee that every parent row gets
-a child, to condition one column's distribution on another, and to inject a named anomaly into a
-timeline. None of it is hidden in the meantime, because a reference architecture that quietly
-flatters its own data teaches the wrong lesson.
+These are limits of [model2data](https://github.com/JB-Analytica/model2data), not choices made
+here, and the empty orders are staying. Making the generator give every parent row a child would
+be wrong far more often than right: 79 of the 600 customers here have never ordered, which is
+precisely what a real customer table looks like, and `dim_customers.has_ordered` exists to say
+so. An order is different from a customer only because a webshop will not accept an empty
+basket — a rule about one particular relationship that a data model has no way to state. Tuning
+does not rescue it either: doubling the lines per order reaches 1.5% empty, at the cost of a
+basket size no coffee shop has.
+
+So the artefact stays and is written down here instead. The other two are real gaps someone
+could close — conditioning one column's distribution on another, and injecting a named anomaly
+into a timeline — but none of it is hidden in the meantime, because a reference architecture
+that quietly flatters its own data teaches the wrong lesson.
