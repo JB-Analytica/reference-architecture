@@ -17,6 +17,8 @@ STATIC = EVIDENCE_DIR / "static"
 # A markdown link, excluding image/asset references, which start with `!`.
 PAGE_LINK = re.compile(r"(?<!!)\[[^\]]*\]\((/[^)]*)\)")
 ASSET_LINK = re.compile(r"!\[[^\]]*\]\((/[^)]*)\)")
+# An inline <Value /> followed straight by punctuation, which renders with a space before it.
+VALUE_THEN_PUNCTUATION = re.compile(r"<Value[^>]*/>\s*[.,;:!?)]")
 
 
 def _markdown_pages() -> list:
@@ -65,4 +67,22 @@ def test_no_value_component_starts_a_line() -> None:
             assert not line.lstrip().startswith("<Value"), (
                 f"{page.name}:{number} starts a line with <Value>, which splits the paragraph. "
                 "Rewrap so it sits mid-line."
+            )
+
+
+def test_no_value_component_is_followed_by_punctuation() -> None:
+    """An inline `<Value />` must be followed by a word, never by a comma or full stop.
+
+    Evidence's component puts the formatted number on its own line inside its `<span>`, so the
+    markup collapses to a trailing space *inside* the span. Follow it with punctuation and the
+    page reads "was EUR 346,644 , so" -- with the gap before the comma. There is no prop for
+    it and CSS cannot strip a text node's trailing space, so the sentence has to be worded so
+    a word comes next.
+    """
+    for page in _markdown_pages():
+        for number, line in enumerate(page.read_text().splitlines(), start=1):
+            match = VALUE_THEN_PUNCTUATION.search(line)
+            assert match is None, (
+                f"{page.name}:{number} follows a <Value> with {match.group()[-1]!r}, which "
+                "renders a space before it. Reword so a word follows the value."
             )

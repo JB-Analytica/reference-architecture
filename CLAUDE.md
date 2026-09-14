@@ -58,8 +58,17 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
 - **The report explains itself on `evidence/pages/architecture.md`**, for readers who see the
   published site and never the repo. It has to stay in step with `docs/architecture/README.md`,
   which is the source of the two.
-- **An Evidence `<Value>` must sit mid-line.** Starting a line with one makes markdown treat it
-  as its own block and splits the paragraph around it.
+- **An Evidence `<Value>` must sit mid-line, and must be followed by a word.** Starting a line
+  with one makes markdown treat it as its own block and splits the paragraph around it. Following
+  one directly with a comma or full stop renders a space before the punctuation, because the
+  component puts the number on its own line inside its `<span>` and the newline collapses to a
+  trailing space — there is no prop for it and CSS cannot strip it. `tests/test_report.py` fails
+  on both.
+- **`docs/img/report.png` is a screenshot, so it goes stale silently.** Re-take it whenever the
+  report's look changes: build the report, serve `evidence/build` over HTTP (the asset URLs need
+  a web root), and capture `/performance` with Playwright at a 1440x900 viewport and
+  `device_scale_factor=1` — viewport only, not `full_page`. Keep it under 500 KB or
+  `check-added-large-files` blocks the commit.
 - **Concrete run figures (node counts, revenue totals) live in two places only** — the README's
   "What success looks like" and `docs/versions.md`. They were previously repeated in the diagram
   and elsewhere and had drifted everywhere. Re-measure rather than copy.
