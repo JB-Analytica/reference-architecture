@@ -106,6 +106,16 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
 - **Layering and naming follow the staging / intermediate / marts convention** described in
   `docs/architecture/README.md`. Read that before adding a model.
 
+## Working on this repo
+
+`main` is protected and the protection applies to admins too. Nothing reaches it except through a
+pull request whose `Lint, types, tests` and `Full run` checks have passed: no direct pushes, no
+force pushes, no deletions. Approvals are set to zero, so a solo maintainer can still merge their
+own pull request — requiring one would lock the only admin out, because GitHub does not let you
+approve your own. The Pages job (`publish`) is deliberately **not** a required check: it only runs
+on pushes to `main`, so requiring it would leave every pull request waiting for a check that never
+arrives.
+
 ## Gotchas
 
 - **`.env` is optional and nothing in it is required.** Only `DBT_TARGET` and
