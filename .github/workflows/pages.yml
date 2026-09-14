@@ -1,0 +1,64 @@
+name: Pages
+
+# Publishes the report to GitHub Pages so the dashboards can be read without cloning anything.
+# That is the reason Evidence was chosen over Rill and MetricFlow, so it is worth wiring up.
+#
+# On main only. A pull request gets its report as a downloadable artifact from ci.yml instead;
+# publishing from a branch would let any PR overwrite what is live.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Pages allows one deployment at a time. Queue rather than cancel: a cancelled deploy can leave
+# the live site on the previous commit with no indication of why.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: evidence/package-lock.json
+      - run: uv sync
+      - run: npm ci
+        working-directory: evidence
+
+      # Ask Pages where this site will actually live, before building. On a project site that
+      # is /<repo>; on a custom domain it is the empty string, because the site sits at the
+      # domain root. Taking the value from here rather than hardcoding it means attaching or
+      # removing a custom domain needs no change to this file -- and a hardcoded prefix that
+      # outlived its URL would serve the whole report as unstyled HTML.
+      - uses: actions/configure-pages@v6
+        id: pages
+
+      # The whole stack, from the DBML upwards -- the published report is built from the same
+      # four stages a reader runs locally, not from a checked-in copy that could drift.
+      #
+      # `refarch report` writes the base path into evidence.config.yaml for the build and takes
+      # it out again; committing it would break the local preview. An empty value is a no-op.
+      - name: Build the report for the Pages URL
+        run: uv run refarch run --target prod --base-path "${{ steps.pages.outputs.base_path }}"
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: evidence/build
+      - id: deploy
+        uses: actions/deploy-pages@v5

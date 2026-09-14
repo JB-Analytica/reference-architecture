@@ -1,0 +1,51 @@
+# The DuckDB file dbt builds is the only data source. It is read straight off disk -- there is
+# no server between the warehouse and the report.
+plugins:
+  components:
+    "@evidence-dev/core-components": {}
+  datasources:
+    "@evidence-dev/duckdb": {}
+
+# jbanalytica.com is a light site and has no dark variant, so the report does not offer one
+# either: a dark theme here would be invented rather than brand.
+appearance:
+  default: light
+  switcher: false
+
+# Every value below is a token from the website's assets/css/style.css. Nothing is eyeballed.
+theme:
+  colors:
+    # --link-blue. The site's AA-safe link colour; Evidence uses `primary` for links and
+    # interactive accents, so the readable blue belongs here rather than --bright-blue.
+    primary: "#0C6EBA"
+    # --orange-text, not --orange. The brand's orange (#FA9306) is a fill colour: the site
+    # keeps a separate darker orange for accent TEXT on light grounds because #FA9306 misses
+    # 4.5:1. Evidence puts `accent` on text, so it gets the text-safe one.
+    accent: "#A15700"
+    base-100: "#FFFFFF"       # --white, the card and page surface
+    base-200: "#F6F8FB"       # --off-white, the site's page ground
+    base-300: "#E4E9F1"       # --line
+    base-heading: "#071D3D"   # --navy
+    base-content: "#182333"   # --ink-900, the site's body colour
+    base-content-muted: "#62748A"  # --ink-500, verified 4.5:1 on white and off-white
+    info: "#2196F0"           # --bright-blue
+    warning: "#FA9306"        # --orange, used as a fill here rather than as text
+  colorPalettes:
+    # Brand colours only, ordered so neighbouring series stay distinguishable. The site has no
+    # categorical chart palette of its own, so this is derived from its palette rather than
+    # copied from it -- and it is deliberately not padded out with invented hues.
+    default:
+      - "#0A3866"  # --deep-blue
+      - "#FA9306"  # --orange
+      - "#2196F0"  # --bright-blue
+      - "#A15700"  # --orange-text
+      - "#A8C9EE"  # --light-blue
+      - "#071D3D"  # --navy
+      - "#0C6EBA"  # --link-blue
+      - "#C96E00"  # --orange-ink
+      - "#5B6B82"  # --ink-600
+      - "#D3DBE6"  # --line-strong
+  colorScales:
+    default:
+      - "#A8C9EE"  # --light-blue
+      - "#071D3D"  # --navy

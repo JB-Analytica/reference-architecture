@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reference-architecture"
+version = "0.1.0"
+description = "JB Analytica reference architecture: model2data -> dlt -> DuckDB -> dbt -> Evidence"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "JB Analytica" }]
+dependencies = [
+    "dlt[duckdb,sql_database]>=1.30",
+    # dbt-core 2.0 is release-candidate as of 2026-09-09 and no adapter accepts it yet.
+    # Latest stable pair until both are released; see docs/versions.md.
+    "dbt-core>=1.12.4,<2",
+    "dbt-duckdb>=1.11,<2",
+    "model2data>=1.7.1",
+    "duckdb>=1.3",
+    "duckdb-engine>=0.17",
+    "pyarrow>=17",
+    "typer>=0.20",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pre-commit",
+    "ruff>=0.1.0",
+    "ty>=0.0.4",
+    "poethepoet>=0.38.0",
+]
+
+[project.scripts]
+refarch = "refarch.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["refarch*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.poe.tasks]
+lint = "ruff check ."
+fmt = "ruff format ."
+typecheck = "ty check refarch"
+test = "pytest"
+check = ["lint", "typecheck", "test"]
+generate = "refarch generate"
+load = "refarch load"
+transform = "refarch transform"
+run = "refarch run"

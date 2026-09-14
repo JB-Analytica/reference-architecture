@@ -1,0 +1,212 @@
+version: 2
+
+# The marts layer is the contract with the business, and the only layer the report reads --
+# `dbt_project.yml` tags everything in this folder `bi`.
+#
+# Evidence has no semantic layer, so these models ARE the semantic layer: a column means what
+# the mart SQL says it means, and an Evidence page may group and sum those columns but must not
+# redefine them.
+#
+# Column-level `description` and `data_tests` are therefore the contract, not decoration.
+
+models:
+  - name: fct_orders
+    description: >
+      One row per order, with its money rolled up from the line items and its fulfilment
+      timeline. The grain every revenue and order-volume question is answered at.
+    columns:
+      - name: order_id
+        description: Primary key. One row per order.
+        data_tests: [unique, not_null]
+      - name: customer_id
+        description: The customer who placed the order.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_id
+      - name: ordered_at
+        description: When the order was placed (UTC).
+        data_tests: [not_null]
+      - name: order_date
+        description: Date the order was placed.
+      - name: order_status
+        description: pending, paid, shipped, delivered or cancelled.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [pending, paid, shipped, delivered, cancelled]
+      - name: sales_channel
+        description: Where the order came from.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [web, mobile_app, marketplace, store]
+      - name: shipping_city
+        description: City the order shipped to.
+      - name: shipping_country
+        description: Country the order shipped to.
+      - name: shipped_at
+        description: When the order left the warehouse; null until it ships.
+      - name: delivered_at
+        description: When the order arrived; null until delivered.
+      - name: line_item_count
+        description: Number of distinct products on the order.
+      - name: units
+        description: Total units across all lines on the order.
+      - name: gross_amount_eur
+        description: Line prices times quantity, before discounts, in euros.
+      - name: discount_eur
+        description: Total discount granted on the order, in euros.
+      - name: net_amount_eur
+        description: >
+          Gross minus discounts, in euros, for the order **as placed** -- cancellations
+          included. This is booked revenue: what the customer asked for. Summing it answers
+          "how much did people order", not "how much did we earn".
+        data_tests: [not_null]
+      - name: realised_net_amount_eur
+        description: >
+          The same money, but zero when the order was cancelled -- revenue that actually
+          happened. This is the column to sum for a revenue figure.
+
+          It is stored per row rather than left as a filter so that it stays additive: summing
+          it is correct at every grain, and a ratio built from it (cancellation rate, realised
+          share) re-derives correctly when rolled up from day to month. A stored ratio would
+          not, because you cannot average an average.
+        data_tests:
+          - not_null
+          # The pair must stay consistent with the cancellation flag, or the marts drift
+          # back to two meanings of "revenue". Pinned by the singular test in dbt/tests/
+          # rather than a package: two assertions do not justify a dependency in a repo
+          # whose whole point is that it installs with nothing.
+      - name: is_cancelled
+        description: True when the order was cancelled.
+      - name: is_delivered
+        description: True when the order was delivered.
+      - name: days_to_ship
+        description: Days between ordering and shipping; null while unshipped.
+
+  - name: fct_order_items
+    description: >
+      One row per product line on an order, carrying the order's customer and channel so
+      product questions can be asked without a second join.
+    columns:
+      - name: order_item_id
+        description: Primary key. One row per order line.
+        data_tests: [unique, not_null]
+      - name: order_id
+        description: The order this line belongs to.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fct_orders')
+                field: order_id
+      - name: product_id
+        description: The product sold on this line.
+        data_tests: [not_null]
+      - name: customer_id
+        description: The customer who placed the order.
+      - name: ordered_at
+        description: When the parent order was placed.
+      - name: order_status
+        description: Status of the parent order.
+      - name: sales_channel
+        description: Channel of the parent order.
+      - name: quantity
+        description: Units of this product on the line.
+        data_tests: [not_null]
+      - name: unit_price_eur
+        description: Price per unit at the time of ordering.
+      - name: net_amount_eur
+        description: >
+          Line revenue after discount, in euros, for the order as placed -- cancellations
+          included. Booked, not realised; see realised_net_amount_eur.
+        data_tests: [not_null]
+      - name: realised_net_amount_eur
+        description: >
+          Line revenue that actually happened: zero when the parent order was cancelled. The
+          column to sum for product revenue.
+        data_tests:
+          - not_null
+      - name: is_cancelled
+        description: >
+          True when the parent order was cancelled. Carried on the line so a product question
+          can exclude cancellations without re-deriving the rule from order_status.
+
+  - name: dim_customers
+    description: >
+      One row per customer, with the lifetime aggregates that make a customer list useful on
+      its own. Cancelled orders are excluded from lifetime revenue.
+    columns:
+      - name: customer_id
+        description: Primary key.
+        data_tests: [unique, not_null]
+      - name: full_name
+        description: First and last name.
+      - name: email
+        description: Login email, lower-cased.
+        data_tests: [unique, not_null]
+      - name: phone
+        description: Phone number where the customer gave one.
+      - name: city
+        description: Customer's home city.
+      - name: country
+        description: Customer's home country.
+      - name: customer_segment
+        description: consumer or business.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [consumer, business]
+      - name: is_marketing_opt_in
+        description: Whether the customer accepted marketing email.
+      - name: customer_since_at
+        description: When the account was created.
+      - name: first_order_at
+        description: First non-cancelled order; null for customers who never ordered.
+      - name: last_order_at
+        description: Most recent non-cancelled order.
+      - name: lifetime_order_count
+        description: Non-cancelled orders placed, all time.
+        data_tests: [not_null]
+      - name: lifetime_realised_net_revenue_eur
+        description: Net revenue from this customer, all time, cancellations excluded.
+        data_tests: [not_null]
+      - name: has_ordered
+        description: True when the customer has at least one non-cancelled order.
+
+  - name: dim_products
+    description: One row per product, with a composed display name and unit economics in euros.
+    columns:
+      - name: product_id
+        description: Primary key.
+        data_tests: [unique, not_null]
+      - name: sku
+        description: EAN-13 barcode.
+        data_tests: [unique, not_null]
+      - name: product_name
+        description: Human-readable name composed from origin, roast, category and weight.
+      - name: coffee_origin
+        description: Country the beans come from.
+      - name: roast_level
+        description: light, medium or dark.
+      - name: product_category
+        description: beans, ground, capsules or equipment.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [beans, ground, capsules, equipment]
+      - name: weight_grams
+        description: Pack weight in grams.
+      - name: unit_price_eur
+        description: List price per unit.
+      - name: unit_cost_eur
+        description: Cost per unit.
+      - name: unit_margin_eur
+        description: List price minus cost, per unit.
+      - name: is_active
+        description: Whether the product is currently sellable.
+      - name: listed_at
+        description: When the product was added to the catalogue.
