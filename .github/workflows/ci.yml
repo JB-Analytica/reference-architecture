@@ -50,13 +50,18 @@ jobs:
       # the report, which is a static site -- unzip it and serve the folder with any static
       # file server. It needs no backend, but it does need a web root: the asset URLs are
       # absolute from the site root, so opening index.html over file:// renders it unstyled.
-      - uses: actions/upload-artifact@v5
+      #
+      # v7, not v5: v5 declares `runs.using: node20`, and the runners now force those onto
+      # Node 24 with a deprecation warning on every run. v6 moved to node24 and v7 added an
+      # opt-in `archive: false` for single unzipped files; leaving it at its default keeps
+      # these two uploads zipped exactly as before.
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: warehouse
           path: warehouse/refarch.duckdb
           retention-days: 7
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: report
