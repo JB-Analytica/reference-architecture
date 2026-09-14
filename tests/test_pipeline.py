@@ -1,4 +1,4 @@
-"""Run the real dlt source against a DuckDB destination: no warehouse needed to prove the logic."""
+"""Run the real dlt source against a throwaway DuckDB warehouse, one per test."""
 
 from __future__ import annotations
 

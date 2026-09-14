@@ -12,8 +12,10 @@ clean-targets: ["target", "dbt_packages"]
 flags:
   send_anonymous_usage_stats: false
 
-# Datasets are <target dataset>_<layer>: refarch_staging, refarch_marts in prod;
+# Schemas are <target schema>_<layer>: refarch_staging, refarch_marts in prod;
 # refarch_dev_staging, refarch_dev_marts in dev. dbt's default generate_schema_name does this.
+# All of them live in the one DuckDB file, so `duckdb warehouse/refarch.duckdb` then
+# `show all tables` shows the entire warehouse, raw layer included.
 models:
   refarch:
     staging:
@@ -25,6 +27,6 @@ models:
     marts:
       +schema: marts
       +materialized: table
-      # Lightdash only exposes models with this tag (see refarch deploy). Marts are the contract;
-      # everything upstream is plumbing.
-      +tags: ["lightdash"]
+      # Marts are the contract with the business; everything upstream is plumbing. Whatever
+      # BI tool sits on top should expose this tag and nothing else.
+      +tags: ["bi"]

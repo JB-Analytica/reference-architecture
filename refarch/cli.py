@@ -3,35 +3,46 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import typer
 
 from refarch import generate as generate_stage
-from refarch import lightdash_api
-from refarch.config import DBT_DIR, LIGHTDASH_DIR, ROOT, settings
+from refarch.config import (
+    DBT_DIR,
+    EVIDENCE_CONFIG,
+    EVIDENCE_DIR,
+    EVIDENCE_SOURCE_DIR,
+    ROOT,
+    settings,
+)
 
 app = typer.Typer(
-    help="model2data -> dlt -> BigQuery -> dbt -> Lightdash, stage by stage.",
+    help="model2data -> dlt -> DuckDB -> dbt -> Evidence, stage by stage.",
     no_args_is_help=True,
     context_settings={"help_option_names": ["-h", "--help"]},
 )
 
-LIGHTDASH_TAG = "lightdash"
-
 
 def _dbt_env(target: str | None = None) -> dict[str, str]:
-    """Environment for dbt and for the Lightdash CLI, which shells out to dbt itself.
+    """Environment for the dbt child process.
 
     The interpreter running this CLI owns the right dbt; without putting its bin directory
     first, a bare `dbt` resolves through whatever shim happens to be on PATH (pyenv, a system
     install) and fails or -- worse -- silently uses a different version.
+
+    REFARCH_WAREHOUSE is passed explicitly so dbt opens the same DuckDB file dlt just wrote,
+    whatever the caller's working directory.
     """
     env = dict(os.environ)
     env["PATH"] = os.pathsep.join([str(Path(sys.executable).parent), env.get("PATH", "")])
     env["DBT_PROFILES_DIR"] = str(DBT_DIR)
+    env["REFARCH_WAREHOUSE"] = str(settings().warehouse_path)
     if target:
         env["DBT_TARGET"] = target
     return env
@@ -58,7 +69,7 @@ def generate() -> None:
 
 @app.command()
 def load() -> None:
-    """Stage 2 -- extract the source system into BigQuery with dlt (incremental, merge on key)."""
+    """Stage 2 -- extract the source system into the warehouse with dlt (incremental, merge)."""
     from dlt.pipeline.exceptions import PipelineStepFailed
 
     from refarch.pipelines import webshop
@@ -95,74 +106,118 @@ def transform(
     typer.secho("Transformations built.", fg=typer.colors.GREEN)
 
 
+def _evidence_env() -> dict[str, str]:
+    """Environment for the Evidence child process.
+
+    Evidence resolves a source's `filename` against that source's own folder and ignores any
+    `directory` handed to it, so an absolute path cannot be expressed: the override has to be
+    the warehouse's path *relative to* evidence/sources/refarch. Computing it here means
+    REFARCH_WAREHOUSE keeps working wherever it points, and dbt and Evidence cannot drift onto
+    two different files.
+    """
+    env = dict(os.environ)
+    warehouse = settings().warehouse_path.resolve()
+    env["EVIDENCE_SOURCE__refarch__filename"] = os.path.relpath(warehouse, EVIDENCE_SOURCE_DIR)
+    return env
+
+
+def _require_npm() -> str:
+    """Evidence is a Node application; this is the one stage `uv` alone cannot run."""
+    npm = shutil.which("npm")
+    if npm is None:
+        typer.secho(
+            "npm was not found. The report stage needs Node 18 or newer -- everything before "
+            "it (generate, load, transform) runs without it. Install Node, or run the earlier "
+            "stages and inspect the warehouse with `duckdb warehouse/refarch.duckdb`.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
+    if not (EVIDENCE_DIR / "node_modules").exists():
+        typer.secho("Installing Evidence's dependencies (first run only).", fg=typer.colors.BLUE)
+        _run([npm, "ci"], cwd=EVIDENCE_DIR)
+    return npm
+
+
+@contextmanager
+def _base_path(base_path: str | None) -> Iterator[None]:
+    """Temporarily give Evidence a deployment base path.
+
+    Evidence reads `deployment.basePath` from evidence.config.yaml and offers no environment
+    override, but the value cannot simply be committed: a base path makes every asset URL
+    absolute under it, which breaks opening build/index.html from the filesystem. So it is
+    written for the duration of the build and taken out again afterwards.
+
+    The original text is restored byte for byte rather than re-serialised, because
+    evidence.config.yaml carries the comments explaining the brand colour choices and a YAML
+    round-trip would drop every one of them.
+    """
+    if not base_path:
+        yield
+        return
+    original = EVIDENCE_CONFIG.read_text()
+    EVIDENCE_CONFIG.write_text(f"{original.rstrip()}\n\ndeployment:\n  basePath: {base_path}\n")
+    try:
+        yield
+    finally:
+        EVIDENCE_CONFIG.write_text(original)
+
+
 @app.command()
-def deploy(
-    create: str | None = typer.Option(
-        None,
-        help="Create a new Lightdash project with this name instead of updating the current one.",
+def report(
+    dev: bool = typer.Option(
+        False, help="Serve with hot reload instead of building the static site."
     ),
-    target: str = typer.Option("prod", help="dbt target whose datasets Lightdash should read."),
-    project_uuid: str | None = typer.Option(
-        None, help="Lightdash project UUID (default: CLI config)."
+    base_path: str | None = typer.Option(
+        None,
+        help="Build for a site served under this path, e.g. /reference-architecture for "
+        "GitHub Pages. Must start with '/'.",
     ),
 ) -> None:
-    """Stage 4 -- deploy the semantic layer to Lightdash and upload charts and dashboards."""
-    # --assume-yes keeps the CLI non-interactive: it otherwise prompts on an unsupported dbt
-    # version and whenever a stale preview project exists, either of which hangs forever in CI.
-    deploy_cmd = [
-        "lightdash",
-        "deploy",
-        "--project-dir",
-        str(DBT_DIR),
-        "--profiles-dir",
-        str(DBT_DIR),
-        "--target",
-        target,
-        "--assume-yes",
-    ]
-    if create:
-        deploy_cmd += ["--create", create]
-    else:
-        # Name the project explicitly; the CLI's saved default can be a leftover preview.
-        deploy_cmd += ["--project", lightdash_api.resolve_auth(project_uuid).project_uuid]
-    _run(deploy_cmd, env=_dbt_env(target))
-
-    # `lightdash deploy --create` switches the CLI's active project to the new one, so resolving
-    # auth *after* the deploy picks it up without the user copying a UUID around.
-    auth = lightdash_api.resolve_auth(project_uuid)
-    lightdash_api.restrict_explores_to_tag(auth, LIGHTDASH_TAG)
-    name = lightdash_api.project_name(auth)
-    typer.echo(f"Explores in '{name}' restricted to models tagged '{LIGHTDASH_TAG}'.")
-
-    _run(
-        [
-            "lightdash",
-            "upload",
-            "--path",
-            str(LIGHTDASH_DIR),
-            "--project",
-            auth.project_uuid,
-            "--force",
-        ],
-        env=_dbt_env(target),
+    """Stage 4 -- build the Evidence report over the warehouse (static site in evidence/build)."""
+    if base_path and not base_path.startswith("/"):
+        typer.secho(
+            f"--base-path must start with '/' (got {base_path!r}). Evidence rejects it otherwise.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
+    npm = _require_npm()
+    env = _evidence_env()
+    with _base_path(base_path):
+        # `sources` re-reads the warehouse and rewrites the parquet the report queries. Always
+        # run it first, or the report silently renders the previous run's numbers.
+        _run([npm, "run", "sources"], cwd=EVIDENCE_DIR, env=env)
+        if dev:
+            _run([npm, "run", "dev"], cwd=EVIDENCE_DIR, env=env)
+            return
+        _run([npm, "run", "build"], cwd=EVIDENCE_DIR, env=env)
+    typer.secho(
+        f"Report built into {EVIDENCE_DIR / 'build'}. Serve it with `npm run preview` from "
+        "evidence/ -- its asset URLs are absolute from the site root, so opening index.html "
+        "over file:// renders it unstyled.",
+        fg=typer.colors.GREEN,
     )
-    typer.secho("Lightdash deployed.", fg=typer.colors.GREEN)
 
 
 @app.command()
 def run(
-    target: str = typer.Option("prod", help="dbt target for the transform and deploy stages."),
+    target: str = typer.Option("prod", help="dbt target for the transform stage."),
     skip_generate: bool = typer.Option(False, help="Reuse the existing generated source system."),
-    skip_deploy: bool = typer.Option(False, help="Stop after dbt; do not touch Lightdash."),
+    skip_report: bool = typer.Option(False, help="Stop after dbt; do not build the report."),
+    base_path: str | None = typer.Option(None, help="Passed through to `refarch report`."),
 ) -> None:
-    """Run every stage in order: generate -> load -> transform -> deploy."""
+    """Run every stage in order: generate -> load -> transform -> report."""
     if not skip_generate:
         generate_stage.generate()
     load()
     _run(["dbt", "build"], cwd=DBT_DIR, env=_dbt_env(target))
-    if not skip_deploy:
-        deploy(create=None, target=target, project_uuid=None)
-    typer.secho("Full run complete.", fg=typer.colors.GREEN)
+    if not skip_report:
+        report(dev=False, base_path=base_path)
+    typer.secho(
+        f"Full run complete. The warehouse is {settings().warehouse_path}.",
+        fg=typer.colors.GREEN,
+    )
 
 
 if __name__ == "__main__":

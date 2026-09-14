@@ -23,40 +23,34 @@ SOURCE_SCHEMA = "raw"  # model2data seeds land here inside the DuckDB file
 
 # --- warehouse and downstream ------------------------------------------------------------------
 DBT_DIR = ROOT / "dbt"
-LIGHTDASH_DIR = ROOT / "lightdash"
 DLT_PIPELINES_DIR = ROOT / ".dlt" / "pipelines"
 RAW_DATASET = f"raw_{SOURCE_SYSTEM_NAME}"
+
+# The warehouse is a single DuckDB file: dlt writes raw_webshop into it, dbt reads that and
+# writes its own schemas back to the same file. One file keeps the whole warehouse inspectable
+# with `duckdb warehouse/refarch.duckdb` and makes the stack runnable with no accounts at all.
+# DuckDB allows one writer at a time, so the stages run in sequence -- which they already do.
+WAREHOUSE_DIR = ROOT / "warehouse"
+DEFAULT_WAREHOUSE = WAREHOUSE_DIR / "refarch.duckdb"
+
+# --- the report ---------------------------------------------------------------------------------
+EVIDENCE_DIR = ROOT / "evidence"
+# Evidence resolves a source's `filename` against the source's own folder and overwrites any
+# `directory` it is given, so the warehouse can only ever be named relative to this path.
+EVIDENCE_SOURCE_DIR = EVIDENCE_DIR / "sources" / "refarch"
+EVIDENCE_CONFIG = EVIDENCE_DIR / "evidence.config.yaml"
 
 
 @dataclass(frozen=True)
 class Settings:
-    gcp_project: str
-    bigquery_location: str
-    credentials_path: Path | None
+    warehouse_path: Path
     dbt_target: str
-
-    @property
-    def credentials(self) -> Path:
-        if self.credentials_path is None or not self.credentials_path.exists():
-            raise FileNotFoundError(
-                "GOOGLE_APPLICATION_CREDENTIALS must point at a service-account JSON key "
-                "(see .env.example)."
-            )
-        return self.credentials_path
 
 
 def settings() -> Settings:
-    creds = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    project = os.environ.get("GCP_PROJECT")
-    if not project:
-        raise RuntimeError(
-            "GCP_PROJECT is not set. Copy .env.example to .env and point it at your own "
-            "BigQuery project -- there is deliberately no default, so a fresh clone cannot "
-            "quietly aim at somebody else's warehouse."
-        )
+    """Read the settings. Every one has a working default: a fresh clone needs no .env."""
+    path = os.environ.get("REFARCH_WAREHOUSE")
     return Settings(
-        gcp_project=project,
-        bigquery_location=os.environ.get("BIGQUERY_LOCATION", "EU"),
-        credentials_path=Path(creds).expanduser() if creds else None,
+        warehouse_path=Path(path).expanduser() if path else DEFAULT_WAREHOUSE,
         dbt_target=os.environ.get("DBT_TARGET", "dev"),
     )

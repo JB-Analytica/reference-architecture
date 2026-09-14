@@ -1,8 +1,5 @@
-# secrets and local config
+# local config
 .env
-*.json.key
-service-account*.json
-.sa.json
 
 # python
 .venv/
@@ -16,16 +13,23 @@ __pycache__/
 # generated source system (deterministic: regenerate with `refarch generate`)
 source_system/generated/
 
+# the warehouse (rebuild it with `refarch run`)
+warehouse/
+
+# Evidence build artefacts (package-lock.json is committed, like uv.lock)
+evidence/node_modules/
+evidence/.evidence/
+evidence/build/
+evidence/static/data/
+
 # dlt / dbt run artefacts
 .dlt/pipelines/
 .dlt/secrets.toml
 dbt/target/
+dbt/.user.yml  # dbt writes a local anonymous-user id here
 dbt/dbt_packages/
 dbt/logs/
 logs/
-
-# Lightdash CLI download bookkeeping (local timestamps, not content)
-lightdash/.lightdash-metadata.json
 
 # Local agent config — not part of the published example
 .claude/

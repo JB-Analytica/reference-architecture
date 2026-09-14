@@ -32,7 +32,7 @@ final as (
         orders.order_status = 'delivered' as is_delivered,
         case
             when orders.order_status in ('shipped', 'delivered') and orders.shipped_at is not null
-                then timestamp_diff(orders.shipped_at, orders.ordered_at, hour) / 24.0
+                then date_diff('hour', orders.ordered_at, orders.shipped_at) / 24.0
         end as days_to_ship
     from orders
     left join order_money on orders.order_id = order_money.order_id

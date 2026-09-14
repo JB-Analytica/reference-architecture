@@ -4,55 +4,54 @@
 
 ```bash
 uv sync --extra dev
-cp .env.example .env      # then point GOOGLE_APPLICATION_CREDENTIALS at a service-account key
-brew install node@24                       # the CLI needs Node >= 24
-export PATH="/opt/homebrew/opt/node@24/bin:$PATH"
-npm install -g @lightdash/cli@2.177.0
-lightdash login https://app.lightdash.cloud
 uv run refarch run --target prod
 ```
 
-The service account needs **BigQuery Job User** and **BigQuery Data Editor** on the project.
+Nothing else is required. `.env` is entirely optional — see `.env.example` for the two variables
+it can override (`DBT_TARGET`, `REFARCH_WAREHOUSE`); copy it only if you want to change one of
+their defaults.
 
 ## Day to day
 
 | Task | Command |
 |---|---|
 | Regenerate the source data | `uv run refarch generate` |
-| Load it into BigQuery | `uv run refarch load` |
+| Load it into the warehouse | `uv run refarch load` |
 | Build and test the models | `uv run refarch transform` |
 | Build one model and its parents | `uv run refarch transform build -s +fct_orders` |
 | Check source freshness | `uv run refarch transform source freshness` |
-| Publish to Lightdash | `uv run refarch deploy` |
+| Build the report | `uv run refarch report` |
+| Serve the report with hot reload | `uv run refarch report --dev` |
 | Everything, in order | `uv run refarch run` |
+| Everything except the report | `uv run refarch run --skip-report` |
 | Lint, types, tests | `uv run poe check` |
+| Open the warehouse | `duckdb warehouse/refarch.duckdb` |
 
 `refarch transform` passes any extra arguments straight through to dbt, so anything dbt can do
-is available without a second entry point.
+is available without a second entry point. Inside the DuckDB shell, `show all tables` lists the
+whole warehouse — the raw layer dlt wrote and every schema dbt built — because it is all one
+file.
+
+`refarch report` needs Node 18 or newer (`npm` on `PATH`); the other three stages need only
+`uv`. If `npm` is missing it says so and exits — `duckdb warehouse/refarch.duckdb` still works
+against whatever `transform` already built. The built report is a static site at
+`evidence/build/index.html`. Serve it -- `npm run preview` from `evidence/`, or any static
+file server. Opening it straight off the filesystem does not work: the asset URLs are absolute
+from the site root, so over `file://` they resolve to the root of your disk and the page loads
+unstyled. The published copy is at https://jb-analytica.github.io/reference-architecture/.
 
 ## Changing the data model
 
 1. Edit `source_system/webshop.dbml`.
 2. `uv run refarch generate` — model2data reports any hint it could not apply, before
    generating a single row.
-3. `uv run refarch load` — dlt evolves the BigQuery schema for added columns on its own.
+3. `uv run refarch load` — dlt evolves the warehouse schema for added columns on its own.
 4. Update the staging model and its YAML, then `uv run refarch transform`.
 
 The generation is deterministic: the same DBML and seed always produce the same rows, so a
 regeneration that changes data you did not expect to change is a signal, not noise.
 
-## Preview environments
-
-`lightdash start-preview --name my-branch` builds a throwaway Lightdash project from the
-current branch's dbt. Useful for reviewing a semantic-layer change before it reaches the main
-project. `lightdash stop-preview --name my-branch` removes it.
-
 ## Things that have already cost time
-
-**Changing a dlt setting that adds a required column.** BigQuery cannot add a required field to
-an existing table, and dlt's merge disposition keeps a second `<dataset>_staging` dataset. Drop
-**both** datasets and clear `.dlt/pipelines/` before reloading, or the load fails on the staging
-table with a schema error.
 
 **A failed dlt load leaves a pending package.** Until it is retried or dropped, the next run
 ignores new data. `refarch load` says so on failure; `dlt pipeline webshop info` shows the
@@ -61,11 +60,23 @@ package.
 **`loaded_at_field` cannot call a project macro.** It is rendered at parse time in a restricted
 context, so the freshness expression in `_webshop__sources.yml` is literal SQL.
 
-**The Lightdash CLI needs Node 24** for `upload` and `download`, though `deploy` runs on
-Node 20. A stack that only deploys the semantic layer looks healthy right up until the first
-content sync fails.
+**DuckDB is single-writer across processes.** `load` and `transform` both write the warehouse
+file, so they have to run in sequence — which they already do, one after the other in
+`refarch run`. (`generate` is unaffected: it writes the separate source-system file under
+`source_system/generated/`.) The failure is a clear `IO Error: Could not set lock on file`, not
+corruption. The usual cause is a `duckdb warehouse/refarch.duckdb` shell left open in another
+terminal — close it and re-run.
 
-**The Lightdash CLI shells out to `dbt`.** If a pyenv shim wins the PATH race, the deploy fails
-with a Python version error that has nothing to do with Lightdash. `refarch deploy` puts its own
-interpreter's bin directory first to prevent this; running `lightdash deploy` by hand outside
-the CLI needs the same care.
+**Evidence resolves a source's `filename` against that source's own folder, ignoring any
+`directory` given to it.** That means the warehouse can only be named relative to
+`evidence/sources/refarch/`, not by an absolute path. `refarch report` works around it by
+computing that relative path itself and injecting it as
+`EVIDENCE_SOURCE__refarch__filename`, so dbt (via `REFARCH_WAREHOUSE`) and Evidence always read
+the same file no matter where `REFARCH_WAREHOUSE` points.
+
+**`npm run sources` has to run before a build, or the report renders the previous run's
+numbers.** It re-reads the warehouse and rewrites the parquet the pages query; skip it and
+`evidence build` or `evidence dev` will silently show stale figures. `refarch report` always
+runs it first, so this only bites if you drive Evidence directly from `evidence/`. See
+[docs/versions.md](versions.md) for why `npm audit` reports vulnerabilities and why the peer
+dependencies are pinned so exactly.
