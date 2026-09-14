@@ -54,8 +54,14 @@ jobs:
       #
       # `refarch report` writes the base path into evidence.config.yaml for the build and takes
       # it out again; committing it would break the local preview. An empty value is a no-op.
+      # --site-url is the origin only; --base-path is appended to it. Both come from the step
+      # above so that the canonical URLs, og:url and the sitemap point at wherever Pages is
+      # actually serving this, with no hostname hardcoded in the workflow.
       - name: Build the report for the Pages URL
-        run: uv run refarch run --target prod --base-path "${{ steps.pages.outputs.base_path }}"
+        run: >
+          uv run refarch run --target prod
+          --base-path "${{ steps.pages.outputs.base_path }}"
+          --site-url "${{ steps.pages.outputs.origin }}"
 
       - uses: actions/upload-pages-artifact@v5
         with:
