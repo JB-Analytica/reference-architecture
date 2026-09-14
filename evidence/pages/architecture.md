@@ -52,10 +52,19 @@ The source is generated, not observed, and it is worth knowing where that shows:
 - **Cancellation is drawn independently of everything else.** It does not correlate with the
   product, the channel or the month, so the [cancellations](/cancellations) page can show you the
   shape of the question but never a real answer to it.
-- **About one order in nine has no line items at all**, an artefact of how child rows are spread
-  over parents. Those orders are real rows with €0 of revenue, so they drag the average order
-  value down by roughly a tenth. A production source would not have them.
-- **Nothing here has been tested against a spike.** The series are smooth by construction.
+- **About one order in nine has no line items at all** — 436 of 4,000. Each line picks its order
+  at random and nothing guarantees every order is picked, so empty ones are a statistical
+  certainty rather than a bug: at 9,000 lines over 4,000 orders the expected share is
+  e^(−9000/4000), or 10.5%, and the observed figure is 10.9%. They are real rows with €0 of
+  revenue, so they pull the average order value down about a tenth — €86.70 against €97.24. A
+  production source would not have them.
+- **Nothing here has been tested against a spike.** The series are smooth by construction: there
+  is a trend and an annual cycle, but no Black Friday, no outage, no viral week.
 
-None of this is hidden, because a reference architecture that quietly flatters its own data
-teaches the wrong lesson.
+These are limits of the generator, not choices made here, and only the second can be dulled by
+configuration — doubling the lines per order takes it from 10.9% to 1.5%, at the cost of a basket
+size no coffee shop has. Fixing any of them properly means teaching
+[model2data](https://github.com/JB-Analytica/model2data) to guarantee that every parent row gets
+a child, to condition one column's distribution on another, and to inject a named anomaly into a
+timeline. None of it is hidden in the meantime, because a reference architecture that quietly
+flatters its own data teaches the wrong lesson.
