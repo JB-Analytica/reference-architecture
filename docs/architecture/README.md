@@ -54,8 +54,11 @@ Intermediate holds the one piece of arithmetic two marts both need — line item
 order grain. Marts are `dim_`/`fct_` and are the only layer anything downstream may read.
 
 **Semantic layer (`dbt/models/marts/`).** Column definitions live in dbt, not in a BI tool's UI.
-`net_amount_eur`, `is_cancelled`, `days_to_ship` and `lifetime_net_revenue_eur` each mean one
-thing, are code-reviewed, and travel with the repo. Evidence has no semantic layer of its own, so
+`net_amount_eur`, `realised_net_amount_eur`, `is_cancelled`, `days_to_ship` and
+`lifetime_realised_net_revenue_eur` each mean one thing, are code-reviewed, and travel with the
+repo. That the names are long is the point: `net_amount_eur` alone used to mean the order as
+placed in one mart and the order minus cancellations in another, and nothing in the name gave
+that away. Evidence has no semantic layer of its own, so
 these mart columns are now the whole of it — Lightdash's `meta:` metric blocks, which used to
 declare `sum`/`count` aggregations once in this YAML, have been deleted. What survives that
 switch and what does not is worth being precise about: the column definitions still live in one

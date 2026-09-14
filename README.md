@@ -99,16 +99,32 @@ plus a handful of parquet files, about 87 MB, most of it the DuckDB WASM bundle 
 browser query the parquet directly. A reader can see the dashboards without running anything,
 which the other two candidates cannot do.
 
-The report lives in `evidence/`. `evidence/pages/` holds three pages — `index.md` (net revenue,
+The report lives in `evidence/`. `evidence/pages/` holds four pages — `index.md` (net revenue,
 orders, average order value and cancellation rate, plus net revenue by month and by channel,
 order status mix, and average days to ship by month), `products.md` (top ten products by net
-revenue) and `customers.md` (top twenty customers, plus lifetime net revenue by segment) — the
-same nine figures this stack used to publish to Lightdash. `evidence/sources/refarch/` holds the
-connection and four thin passthrough queries, one per mart.
+revenue), `customers.md` (top twenty customers, plus lifetime net revenue by segment) and
+`cancellations.md` (rate and lost revenue over time, by channel and by product). The first three
+carry the nine figures this stack used to publish to Lightdash; the fourth is new.
+`evidence/sources/refarch/` holds the connection and four thin passthrough queries, one per mart.
+
+### Revenue
+
+Revenue means **realised** revenue, and the marts say so in the column names. `fct_orders` and
+`fct_order_items` each carry `net_amount_eur` — the order as placed, cancellations included —
+next to `realised_net_amount_eur`, which is zero when the order was cancelled.
+`dim_customers.lifetime_realised_net_revenue_eur` is realised too.
+
+They are separate columns rather than one column and a filter because a filter is something a
+reader has to remember, and this repo had already proved that they do not: `fct_orders` used to
+count cancelled orders as revenue while `dim_customers` quietly excluded them, so the same word
+meant two numbers five percent apart depending on which mart you asked. Both are stored per row
+so both stay additive — summing either is correct at any grain, and the cancellation rate
+re-derives correctly when rolled up from day to month, which a stored ratio would not.
+`dbt/tests/` pins the pair against `is_cancelled`.
 
 Evidence has no semantic layer of its own, so the trade from the Lightdash days is real: the dbt
 marts are now the semantic layer for column definitions — `net_amount_eur`, `is_cancelled`,
-`days_to_ship`, `lifetime_net_revenue_eur` are all defined once in mart SQL and Evidence pages
+`days_to_ship`, `lifetime_realised_net_revenue_eur` are all defined once in mart SQL and Evidence pages
 only group and sum them — but the aggregations themselves (`sum`, `count`, the two ratios) are
 now written in each page's SQL rather than declared once in YAML. They are still in git and still
 code-reviewed, but there is no single declarative metric definition the way Lightdash's `meta:`

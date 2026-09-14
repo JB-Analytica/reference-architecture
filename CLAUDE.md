@@ -55,7 +55,15 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   a dialect gap needs papering over, add a macro next to `cents_to_eur` and `title_case` rather
   than inlining the workaround.
 - **Money is integer cents in the source and euros in the marts.** Convert with the
-  `cents_to_eur` macro at the mart boundary only.
+  `cents_to_eur` macro at the mart boundary only. The macro parenthesises its argument; keep it
+  that way. Without the parentheses `cents_to_eur('a - b')` expanded to `a - b / 100`, which
+  divided only the last term and silently inflated two mart columns by 100x and 500x.
+- **"Revenue" means realised revenue.** `fct_orders` and `fct_order_items` carry both
+  `net_amount_eur` (the order as placed, cancellations included) and `realised_net_amount_eur`
+  (zero when cancelled); `dim_customers.lifetime_realised_net_revenue_eur` is realised too. Sum
+  the realised column for any revenue figure. Do not add a third money column without deciding
+  which of the two it is, and do not store a ratio per row -- ratios must re-derive from
+  additive parts or they break on roll-up. `dbt/tests/` pins the pair against the flag.
 - **Layering and naming follow the staging / intermediate / marts convention** described in
   `docs/architecture/README.md`. Read that before adding a model.
 

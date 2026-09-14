@@ -25,7 +25,12 @@ final as (
         {{ cents_to_eur('order_items.quantity * order_items.unit_price_cents') }} as gross_amount_eur,
         {{ cents_to_eur('order_items.discount_cents') }} as discount_eur,
         {{ cents_to_eur('order_items.quantity * order_items.unit_price_cents - order_items.discount_cents') }}
-            as net_amount_eur
+            as net_amount_eur,
+        {{ cents_to_eur(
+            "case when orders.order_status = 'cancelled' then 0
+                  else order_items.quantity * order_items.unit_price_cents
+                       - order_items.discount_cents end"
+        ) }} as realised_net_amount_eur
     from order_items
     inner join orders on order_items.order_id = orders.order_id
 
