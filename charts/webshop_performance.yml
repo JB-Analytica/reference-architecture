@@ -103,6 +103,12 @@ charts:
     # FormatConfig `prefix:` escape hatch is not accepted on a cartesian axis.
     # The euro goes in the axis title instead.
     y_label: "Net revenue (€)"
+    # d3-format's grammar allows only $ or # as the currency symbol, so a euro cannot
+    # reach a cartesian tick: style.number_format and style.axis_y.labels.format both take
+    # a bare spec string, and the FormatConfig `prefix:` that the KPIs above use is rejected
+    # here. The unit goes in the axis title -- which is where a unit belongs anyway -- and
+    # the heuristic that wants to see a $ is told so locally rather than from the CLI.
+    warnings_ignore: [WARN-LIKELY-CURRENCY-OR-PERCENT-MISSING-FORMATTER]
     style:
       number_format: ",.0f"
 
@@ -115,6 +121,8 @@ charts:
     x: sales_channel
     y: net_revenue_eur
     y_label: "Net revenue (€)"
+    # Same euro constraint as revenue_trend above.
+    warnings_ignore: [WARN-LIKELY-CURRENCY-OR-PERCENT-MISSING-FORMATTER]
     style:
       orientation: horizontal
       number_format: ",.0f"
