@@ -3,7 +3,7 @@ extends: ./jba.yml
 source: warehouse
 
 text: |
-  The same nine figures the Evidence report publishes, rebuilt as a dbt charts board.
+  The same figures the Evidence performance page publishes, rebuilt as a dbt charts board.
   Every number comes from the dbt marts in `warehouse/refarch.duckdb` -- nothing is
   computed here, and nothing is stored anywhere a pull request cannot see it.
 
@@ -99,18 +99,21 @@ charts:
     subtitle: Net of discounts, by the month the order was placed
     x: month
     y: net_revenue_eur
-    # dbt charts has no locale: the `currency` presets are dollar-only, and the
-    # FormatConfig `prefix:` escape hatch is not accepted on a cartesian axis.
-    # The euro goes in the axis title instead.
-    y_label: "Net revenue (€)"
-    # d3-format's grammar allows only $ or # as the currency symbol, so a euro cannot
-    # reach a cartesian tick: style.number_format and style.axis_y.labels.format both take
-    # a bare spec string, and the FormatConfig `prefix:` that the KPIs above use is rejected
-    # here. The unit goes in the axis title -- which is where a unit belongs anyway -- and
-    # the heuristic that wants to see a $ is told so locally rather than from the CLI.
-    warnings_ignore: [WARN-LIKELY-CURRENCY-OR-PERCENT-MISSING-FORMATTER]
+    y_label: "Net revenue"
     style:
-      number_format: ",.0f"
+      # There is no locale. Every `currency` preset is hardcoded to a dollar, d3-format's
+      # grammar has exactly one currency symbol ($), and the FormatConfig `prefix:` that the
+      # KPIs above use is rejected on a cartesian axis. So the euro is painted by a Vega
+      # expression on the label text.
+      #
+      # `format: currency_whole` underneath it is doing real work and is not dead config:
+      # WARN-LIKELY-CURRENCY-OR-PERCENT-MISSING-FORMATTER inspects the declared format, not
+      # the string that gets painted, and without it the render warns. The two deliberately
+      # disagree -- the format says dollars, the expression paints euros. Keep them together.
+      axis_y:
+        labels:
+          format: currency_whole
+          expr: "'€' + format(datum.value, ',.0f')"
 
   revenue_by_channel_chart:
     type: bar
@@ -120,12 +123,14 @@ charts:
     # setting, not a swap of the channels.
     x: sales_channel
     y: net_revenue_eur
-    y_label: "Net revenue (€)"
-    # Same euro constraint as revenue_trend above.
-    warnings_ignore: [WARN-LIKELY-CURRENCY-OR-PERCENT-MISSING-FORMATTER]
+    y_label: "Net revenue"
     style:
       orientation: horizontal
-      number_format: ",.0f"
+      # Same euro handling as revenue_trend above -- see the comment there.
+      axis_y:
+        labels:
+          format: currency_whole
+          expr: "'€' + format(datum.value, ',.0f')"
 
   order_status_chart:
     type: bar
