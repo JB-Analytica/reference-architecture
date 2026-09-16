@@ -25,6 +25,8 @@ evidence/static/data/
 # dbt-preflight's scratch space: fixtures, a throwaway DuckDB file and the base-branch
 # checkout. Removed at the end of a run unless `dbt-preflight run --keep-workdir`.
 .preflight/
+# The rendered review comment, written by a local run and by the pre-PR gate.
+.preflight-comment.md
 
 # dlt / dbt run artefacts
 .dlt/pipelines/
