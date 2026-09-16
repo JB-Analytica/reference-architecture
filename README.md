@@ -265,7 +265,8 @@ including incremental merge is covered by the same kind of file the real run pro
 - `tests/` — pytest, mirroring the package.
 - `docs/` — [architecture](docs/architecture/README.md), [runbook](docs/runbook.md),
   [versions](docs/versions.md).
-- `.github/workflows/` — `ci.yml` (checks and a full run on every pull request) and `pages.yml`
+- `.github/workflows/` — `ci.yml` (checks and a full run on every pull request),
+  `preflight.yml` (reviews the dbt models a pull request changes) and `pages.yml`
   (publishes the report from `main`).
 
 `source_system/generated/`, `warehouse/`, `.env` and `dbt/target/` are git-ignored. The generated
@@ -297,6 +298,25 @@ request too, and uploads two artifacts: `warehouse` (the DuckDB file) and `repor
 static site — unzip it and serve the folder). That is only possible because
 the warehouse is a file: there is no account to hold a secret for, so the job runs the same way
 on a fork as it does here.
+
+A second workflow, `preflight.yml`, runs [dbt-preflight](https://github.com/JB-Analytica/dbt-preflight)
+on every pull request. It generates synthetic sources from `webshop.dbml`, builds the models the
+change can reach on a throwaway DuckDB file, runs their tests, checks the house conventions, and
+leaves one review comment — updated in place, so a pull request carries one comment rather than a
+stack of them.
+
+It overlaps less with the full run than it looks. `pipeline` proves the stack still runs end to
+end; preflight says what the change did to the *numbers*. It builds `main` on the same fixtures
+and reports the difference: columns added, removed or retyped, row counts, how many rows differ,
+and the metrics listed in `.dbt-preflight.yml` evaluated on both sides. A refactor that quietly
+moves booked revenue by 4 percent arrives as that number, next to the unchanged realised figure,
+before a reviewer has to reason about the SQL.
+
+Preflight needs no credentials here for the same reason nothing else does — the warehouse is
+already a file — but that is not why it exists. Its point is that a project whose warehouse *is*
+BigQuery or Snowflake gets the same review without putting production credentials in CI. This
+repo runs it because it is the tool this stack recommends, and an example that recommends a tool
+should be using it.
 
 ## Cost
 
