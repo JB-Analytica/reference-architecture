@@ -27,6 +27,7 @@ their defaults.
 | Everything except the report | `uv run refarch run --skip-report` |
 | Lint, types, tests | `uv run poe check` |
 | Open the warehouse | `duckdb warehouse/refarch.duckdb` |
+| Preview the pull-request review locally | `dbt-preflight run --base-ref origin/main` |
 
 `refarch transform` passes any extra arguments straight through to dbt, so anything dbt can do
 is available without a second entry point. Inside the DuckDB shell, `show all tables` lists the
@@ -48,6 +49,14 @@ file server. Opening it straight off the filesystem does not work: the asset URL
 from the site root, so over `file://` they resolve to the root of your disk and the page loads
 unstyled. The published copy is at https://reference.jbanalytica.com/.
 
+`dbt-preflight` is not a dependency of this project — it runs in CI from
+[its own action](https://github.com/JB-Analytica/dbt-preflight). To run it here before pushing,
+install it once with `uv tool install dbt-preflight`. With `--base-ref` it reports only what the
+branch changed; without one it builds every model and checks every one against the conventions,
+which is the way to see where the project stands as a whole. Either way it writes its fixtures
+and a throwaway DuckDB file to `.preflight/` and deletes them afterwards — it never touches
+`warehouse/refarch.duckdb`, so it is safe to run while the real warehouse is open.
+
 ## Changing the data model
 
 1. Edit `source_system/webshop.dbml`.
@@ -58,6 +67,10 @@ unstyled. The published copy is at https://reference.jbanalytica.com/.
 
 The generation is deterministic: the same DBML and seed always produce the same rows, so a
 regeneration that changes data you did not expect to change is a signal, not noise.
+
+The same DBML feeds dbt-preflight in CI, so a change here changes the fixtures every pull request
+is reviewed against. Preflight treats an edit to it as a change to every source and rebuilds
+everything, which is what you want: a new column or a changed hint can move any model.
 
 ## Things that have already cost time
 

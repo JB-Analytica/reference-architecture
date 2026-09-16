@@ -1,0 +1,68 @@
+# dbt-preflight: https://github.com/JB-Analytica/dbt-preflight
+#
+# On every pull request, preflight builds the models the change can reach against synthetic
+# data on a throwaway DuckDB file, runs their tests, compares the output against the base
+# branch, checks the house conventions, and leaves one review comment. It does not replace the
+# full run in ci.yml -- that one builds the real stack end to end. Preflight answers the
+# question the full run does not: what did this change do to the numbers, compared with main.
+#
+# The generator is model2data, the same one `refarch generate` uses, so the knobs below mirror
+# BusinessShape in refarch/generate.py. Keep them in step: identical seed, locale and row counts
+# mean preflight's fixtures have the shape the real run has, and its row counts read like the
+# real ones. They are not byte-identical -- preflight has no equivalent of `as_of`, `growth`,
+# `seasonality` or `business_hours`, so dates spread differently. Nothing downstream cares.
+project_dir: dbt
+schema: source_system/webshop.dbml # the one description of the source system, note hints and all
+
+seed: 42
+locale: nl_BE
+rows: 100
+rows_for:
+  customers: 600
+  products: 48
+  orders: 4000
+  order_items: 9000
+
+# No `dialect`: preflight reads dbt/profiles.yml, sees duckdb, and runs the SQL as written.
+# Nothing to transpile, which is the upside of the warehouse already being DuckDB.
+#
+# No `conventions` either. The jba preset is exactly what this repo documents in CLAUDE.md and
+# docs/architecture/README.md, and the presence of this file is what makes it an error rather
+# than advice. A published example should be held to the conventions it teaches.
+
+# The numbers the comment compares between the base branch and the pull request. Preflight reads
+# dbt semantic-layer metrics and Lightdash `meta.metrics` first; this project defines neither, so
+# they are listed here instead. Without them the diff can only say "3,564 rows differ", which
+# tells a reviewer that something moved but not what.
+#
+# Every one is a plain aggregate of a column a mart already defines. That is the point: this file
+# may *read* the marts, it may not redefine them. If a number here needs a `case when` that is not
+# already in a mart column, the mart is missing a column -- add it there.
+#
+# Both sides of the revenue pair are listed deliberately. "Revenue" means realised revenue, but a
+# change that moves booked without moving realised (or the reverse) is exactly the mistake the
+# pair exists to catch, and a reviewer should see both move.
+metrics:
+  - name: realised_net_revenue_eur
+    model: fct_orders
+    sql: sum(realised_net_amount_eur)
+  - name: booked_net_revenue_eur
+    model: fct_orders
+    sql: sum(net_amount_eur)
+  - name: orders
+    model: fct_orders
+    sql: count(*)
+  - name: cancelled_orders
+    model: fct_orders
+    sql: count(*) filter (where is_cancelled)
+  - name: avg_days_to_ship
+    model: fct_orders
+    sql: avg(days_to_ship)
+  # Reads the other side of the reconciliation: a lifetime total computed in dim_customers must
+  # move with realised revenue in fct_orders, or one of the two is wrong.
+  - name: customer_lifetime_revenue_eur
+    model: dim_customers
+    sql: sum(lifetime_realised_net_revenue_eur)
+  - name: units_sold
+    model: fct_order_items
+    sql: sum(quantity)

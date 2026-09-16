@@ -22,6 +22,10 @@ evidence/.evidence/
 evidence/build/
 evidence/static/data/
 
+# dbt-preflight's scratch space: fixtures, a throwaway DuckDB file and the base-branch
+# checkout. Removed at the end of a run unless `dbt-preflight run --keep-workdir`.
+.preflight/
+
 # dlt / dbt run artefacts
 .dlt/pipelines/
 .dlt/secrets.toml

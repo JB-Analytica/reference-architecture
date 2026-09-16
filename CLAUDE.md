@@ -137,6 +137,15 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
   happily on a model that is uniformly wrong -- that is exactly how the `cents_to_eur` bug
   survived review. Add a cross-model check whenever a new mart derives money that another mart
   also derives.
+- **`.dbt-preflight.yml` mirrors `BusinessShape` in `refarch/generate.py`.** Both drive
+  model2data. When the seed, locale or a row count changes in one, change it in the other, or
+  preflight's pull-request comment starts reporting row counts nobody recognises. Preflight has
+  no `as_of`, `growth`, `seasonality` or `business_hours`, so its data is the same shape but not
+  the same rows -- that is expected, not drift.
+- **The `metrics:` in `.dbt-preflight.yml` read the marts; they never redefine them.** Each one
+  is a plain aggregate of a column a mart already computes, the same rule Evidence pages follow.
+  A metric there that needs a `case when` a mart does not have means the mart is missing a
+  column; add it to the mart.
 - **Layering and naming follow the staging / intermediate / marts convention** described in
   `docs/architecture/README.md`. Read that before adding a model.
 
@@ -164,6 +173,11 @@ arrives.
 
 - **`.env` is optional and nothing in it is required.** Only `DBT_TARGET` and
   `REFARCH_WAREHOUSE` are read, and both have working defaults.
+- **dbt-preflight checks the changed models only**, so it will not catch existing debt, and
+  merging a convention fix does not clear it from the models nobody touched. The presence of
+  `.dbt-preflight.yml` is what makes the jba conventions errors rather than warnings; delete the
+  file and they downgrade silently. `dbt-preflight run --no-fail-on-error` with no `--base-ref`
+  runs it locally over every model.
 - **dlt and dbt share one DuckDB file**, and DuckDB locks it to a single writing process. Run
   `load` and `transform` in sequence, and close any `duckdb` shell on the file first — otherwise
   it fails with `IO Error: Could not set lock on file`.

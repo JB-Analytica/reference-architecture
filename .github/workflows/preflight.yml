@@ -1,0 +1,34 @@
+# Warehouse-free review of the dbt models a pull request changes: build them against synthetic
+# data on a throwaway DuckDB file, run their tests, compare the output against main, check the
+# house conventions, and leave one review comment that is updated in place on every push.
+#
+# This does not overlap with ci.yml's `pipeline` job as much as it looks. That job proves the
+# whole stack still runs end to end; this one says what the change did to the numbers, model by
+# model and metric by metric, which a green build cannot tell you. Preflight is JB Analytica's
+# own tool, and a reference architecture that recommends it should be running it.
+#
+# It needs no secret here for the same reason nothing else in this repo does -- the warehouse is
+# a file -- but note that is not why preflight exists: its point is that a project whose
+# warehouse *is* BigQuery or Snowflake still gets this without putting credentials in CI.
+name: dbt preflight
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write # the comment; nothing else is written
+
+jobs:
+  preflight:
+    name: Build the changed models against synthetic data
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0, because preflight checks out the base branch to build it on the same
+      # fixtures and diff the two. A shallow clone has no base commit to check out.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # @v0 follows the latest 0.x release. Pin an exact tag (@v0.3.0) if a release ever needs
+      # holding back; see docs/versions.md for how this repo treats pins.
+      - uses: JB-Analytica/dbt-preflight@v0
