@@ -1,8 +1,9 @@
 # dbt Charts spike
 
-A spike, not a replacement. `webshop_performance.yml` rebuilds the front page of the Evidence
-report (`evidence/pages/index.md`) as a dbt Charts board, against the same DuckDB file and the
-same marts, so the two can be compared honestly.
+A spike, not a replacement. `webshop_performance.yml` rebuilds the Evidence report's performance
+page (`evidence/pages/performance.md`) as a dbt Charts board, against the same DuckDB file and
+the same marts, so the two can be compared honestly -- same four headline figures, same three
+charts, same three sections.
 
 ```bash
 uv tool install dbt-charts
@@ -29,24 +30,37 @@ The warehouse must already be built (`uv run refarch run`).
 
 ## The two rough edges, and what they cost to fix
 
-### Euro formatting -- fixed as far as the tool allows
+### Euro formatting -- solved, with a caveat worth reading
 
-`dct render` now exits 0 with no CLI flags. The board is the only place that knows about it.
+`dct validate` and `dct render` both exit 0, with no CLI flags and no `warnings_ignore`
+anywhere in the board. Nothing is suppressed.
 
-The euro genuinely cannot reach a cartesian axis tick in 0.8.0, and the reason is structural
-rather than a missing config key: `style.number_format` and `style.axis_y.labels.format` both
-take a bare d3 spec, and **d3-format's grammar allows only `$` or `#` as the currency symbol**
--- `parse("€,.0f")` raises. The `FormatConfig` `prefix:` escape hatch that the KPIs use is
-rejected on an axis (`str | preset` only). There is no locale setting anywhere in the package.
+Getting there is not obvious. There is no locale in the package; every `currency` preset is
+hardcoded to a dollar (`currency_whole` is `$,.0f`); d3-format's grammar has exactly one
+currency symbol, `$`, so `parse("€,.0f")` raises; and the `FormatConfig` `prefix:` that works
+on a KPI value slot is rejected on a cartesian axis, as is a `style.formats` alias. Every
+documented route is closed.
 
-So the KPIs -- the numbers anyone actually reads off this page -- carry a real `€`, and the
-axes put the unit in the axis title, which is where a unit belongs anyway. The
-`WARN-LIKELY-CURRENCY-OR-PERCENT-MISSING-FORMATTER` heuristic wants to see a `$`; it is told
-otherwise per chart via `warnings_ignore`, next to the comment explaining why, rather than
-blanket-suppressed from the command line.
+The way through is a Vega expression on the label text:
 
-Worth an upstream issue: a `currency_symbol` on the theme, or `FormatConfig` accepted on an
-axis, would close this for every non-dollar report.
+```yaml
+axis_y:
+  labels:
+    format: currency_whole
+    expr: "'€' + format(datum.value, ',.0f')"
+```
+
+**The `format: currency_whole` under it is load-bearing, not leftover.**
+`WARN-LIKELY-CURRENCY-OR-PERCENT-MISSING-FORMATTER` inspects the *declared* format rather than
+the painted string, so without it the render warns. The two lines deliberately disagree -- the
+format says dollars, the expression paints euros. Delete one and you either get a warning or a
+dollar-signed euro chart.
+
+That second failure is the trap worth knowing about: `format: currency_whole` alone renders
+`$20,000` over euro data, at exit 0, with no warning at all.
+
+Upstream issue, for a first-class fix (a theme-level currency symbol, or `FormatConfig`
+accepted on an axis): dbt-labs/dbt-charts#27.
 
 ### Brand fonts -- fixed, with one caveat
 
