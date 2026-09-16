@@ -79,6 +79,6 @@ fallback.
 - **Custom palettes are not theme roles.** `style.palettes` maps a role to a *shipped* palette
   name only; brand hexes go under `style.charts.color.categorical`, which works but is not the
   same cascade a theme role gets.
-- **Pre-1.0.** 0.8.0, released 14 Sep 2026. The compiler rejects unknown keys, which is good,
+- **Pre-1.0.** 0.8.0, released 15 Sep 2026; the project was announced on 14 Sep. The compiler rejects unknown keys, which is good,
   but the YAML surface moved recently enough that a stale file already trips a schema-migration
   warning.
