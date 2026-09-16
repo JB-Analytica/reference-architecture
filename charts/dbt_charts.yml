@@ -1,0 +1,9 @@
+name: refarch_charts
+
+sources:
+  # The same DuckDB file dbt builds. Read straight off disk, no server in between --
+  # the same arrangement Evidence uses today.
+  warehouse:
+    type: duckdb
+    path: ../warehouse/refarch.duckdb
+    schema: refarch_marts
