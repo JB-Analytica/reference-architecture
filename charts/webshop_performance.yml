@@ -1,0 +1,148 @@
+title: Webshop performance
+extends: ./jba.yml
+source: warehouse
+
+text: |
+  The same nine figures the Evidence report publishes, rebuilt as a dbt charts board.
+  Every number comes from the dbt marts in `warehouse/refarch.duckdb` -- nothing is
+  computed here, and nothing is stored anywhere a pull request cannot see it.
+
+queries:
+  headline:
+    notes: One aggregate row -- the four headline figures plus the booked/realised gap.
+    sql: |
+      select
+          sum(realised_net_amount_eur)                                as net_revenue_eur,
+          sum(net_amount_eur)                                         as booked_revenue_eur,
+          sum(net_amount_eur) - sum(realised_net_amount_eur)          as revenue_lost_eur,
+          count(distinct order_id)                                    as order_count,
+          sum(realised_net_amount_eur) / nullif(count(distinct order_id)
+              filter (where not is_cancelled), 0)                     as average_order_value_eur,
+          count(distinct order_id) filter (where is_cancelled)
+              / nullif(count(distinct order_id), 0)::double           as cancellation_rate
+      from fct_orders
+
+  revenue_by_month: |
+    select
+        date_trunc('month', ordered_at) as month,
+        sum(realised_net_amount_eur)    as net_revenue_eur
+    from fct_orders
+    group by 1
+    order by 1
+
+  revenue_by_channel: |
+    select
+        sales_channel,
+        sum(realised_net_amount_eur) as net_revenue_eur
+    from fct_orders
+    group by 1
+    order by net_revenue_eur desc
+
+  order_status_mix: |
+    select
+        order_status,
+        count(distinct order_id) as order_count
+    from fct_orders
+    group by 1
+    order by order_count desc
+
+  fulfilment_speed: |
+    select
+        date_trunc('month', ordered_at) as month,
+        avg(days_to_ship)               as avg_days_to_ship
+    from fct_orders
+    where days_to_ship is not null
+    group by 1
+    order by 1
+
+charts:
+  kpi_net_revenue:
+    type: kpi
+    query: headline
+    label: Net revenue
+    value: net_revenue_eur
+    style:
+      value:
+        format: { spec: ",.0f", prefix: "€" }
+
+  kpi_orders:
+    type: kpi
+    query: headline
+    label: Orders
+    value: order_count
+    style:
+      value:
+        format: integer
+
+  kpi_aov:
+    type: kpi
+    query: headline
+    label: Average order value
+    value: average_order_value_eur
+    style:
+      value:
+        format: { spec: ",.2f", prefix: "€" }
+
+  kpi_cancellation_rate:
+    type: kpi
+    query: headline
+    label: Cancellation rate
+    value: cancellation_rate
+    style:
+      value:
+        format: percent
+
+  revenue_trend:
+    type: bar
+    query: revenue_by_month
+    title: Net revenue by month
+    subtitle: Net of discounts, by the month the order was placed
+    x: month
+    y: net_revenue_eur
+    # dbt charts has no locale: the `currency` presets are dollar-only, and the
+    # FormatConfig `prefix:` escape hatch is not accepted on a cartesian axis.
+    # The euro goes in the axis title instead.
+    y_label: "Net revenue (€)"
+    style:
+      number_format: ",.0f"
+
+  revenue_by_channel_chart:
+    type: bar
+    query: revenue_by_channel
+    title: Net revenue by channel
+    # Bar always plots x as the category and y as the measure; horizontal is a style
+    # setting, not a swap of the channels.
+    x: sales_channel
+    y: net_revenue_eur
+    y_label: "Net revenue (€)"
+    style:
+      orientation: horizontal
+      number_format: ",.0f"
+
+  order_status_chart:
+    type: bar
+    query: order_status_mix
+    title: Order status mix
+    subtitle: Every order, by the status it is in now
+    x: order_status
+    y: order_count
+
+  fulfilment_chart:
+    type: line
+    query: fulfilment_speed
+    title: Average days to ship, by month
+    subtitle: Orders that reached shipped or delivered
+    x: month
+    y: avg_days_to_ship
+
+rows:
+  - cols: [kpi_net_revenue, kpi_orders, kpi_aov, kpi_cancellation_rate]
+  - text: |
+      Net revenue is **realised**: cancelled orders count as zero, not as revenue. Both
+      `net_amount_eur` and `realised_net_amount_eur` live on `fct_orders`, which is why the
+      two can sit side by side without either being a filter somebody has to remember.
+  - revenue_trend
+  - title: Where the revenue comes from
+    cols: [revenue_by_channel_chart, order_status_chart]
+  - title: Fulfilment
+    rows: [fulfilment_chart]
