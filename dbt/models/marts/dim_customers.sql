@@ -37,33 +37,27 @@ customer_orders as (
     left join order_money on orders.order_id = order_money.order_id
     group by orders.customer_id
 
-),
-
-final as (
-
-    select
-        customers.customer_id,
-        customers.first_name || ' ' || customers.last_name as full_name,
-        customers.email,
-        customers.phone,
-        customers.city,
-        customers.country,
-        customers.customer_segment,
-        -- Display labels live in the mart for the same reason the money columns do: a page may
-        -- group and sum what the mart defines, but it may not decide what a value is called.
-        -- The raw enum stays alongside as the key to filter and join on.
-        {{ sentence_case('customers.customer_segment') }} as segment_label,
-        customers.is_marketing_opt_in,
-        customers.created_at as customer_since_at,
-        customer_orders.first_order_at,
-        customer_orders.last_order_at,
-        coalesce(customer_orders.order_count, 0) as lifetime_order_count,
-        {{ cents_to_eur('coalesce(customer_orders.lifetime_realised_net_amount_cents, 0)') }}
-            as lifetime_realised_net_revenue_eur,
-        customer_orders.order_count is not null as has_ordered
-    from customers
-    left join customer_orders on customers.customer_id = customer_orders.customer_id
-
 )
 
-select * from final
+select
+    customers.customer_id,
+    customers.first_name || ' ' || customers.last_name as full_name,
+    customers.email,
+    customers.phone,
+    customers.city,
+    customers.country,
+    customers.customer_segment,
+    -- Display labels live in the mart for the same reason the money columns do: a page may
+    -- group and sum what the mart defines, but it may not decide what a value is called.
+    -- The raw enum stays alongside as the key to filter and join on.
+    {{ sentence_case('customers.customer_segment') }} as segment_label,
+    customers.is_marketing_opt_in,
+    customers.created_at as customer_since_at,
+    customer_orders.first_order_at,
+    customer_orders.last_order_at,
+    coalesce(customer_orders.order_count, 0) as lifetime_order_count,
+    {{ cents_to_eur('coalesce(customer_orders.lifetime_realised_net_amount_cents, 0)') }}
+        as lifetime_realised_net_revenue_eur,
+    customer_orders.order_count is not null as has_ordered
+from customers
+left join customer_orders on customers.customer_id = customer_orders.customer_id
