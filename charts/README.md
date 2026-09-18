@@ -135,6 +135,10 @@ It fails loudly rather than reading the wrong data, and `DBT_TARGET=prod` in fro
 is the whole fix -- in the commands above and in the CI step -- but it is a second place where
 the target has to be said, and it is easy to hit once.
 
+Already filed upstream by someone else, on Snowflake, where it is worse: dbt-labs/dbt-charts#9
+reports the same mismatch serving data from the wrong *database* silently, because there the
+relation resolved. Ours failed loudly only because the dev schema does not exist in this file.
+
 ### What it cost: the marts no longer end `select * from final`
 
 dbt charts cannot see through a trailing `*`. With the standard dbt idiom in place it reported
@@ -164,6 +168,11 @@ warehouse conventions.
 
 With that done, `dct validate --strict` is clean, the rename above fails it, and CI runs it in
 the `checks` job -- before the pipeline job builds a warehouse for the column to be missing from.
+
+Filed upstream as dbt-labs/dbt-charts#40: the projection inside the `final` CTE is fully static
+and sqlglot already resolves a `select *` against a CTE in the same statement, so the tool could
+see through the idiom its own style guide recommends. If it lands, the mart rewrite stops being
+load-bearing and stays only on its own merits.
 
 ## Still open
 
