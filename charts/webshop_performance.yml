@@ -20,13 +20,13 @@ queries:
               filter (where not is_cancelled), 0)                     as average_order_value_eur,
           count(distinct order_id) filter (where is_cancelled)
               / nullif(count(distinct order_id), 0)::double           as cancellation_rate
-      from fct_orders
+      from {{ ref('fct_orders') }}
 
   revenue_by_month: |
     select
         date_trunc('month', ordered_at) as month,
         sum(realised_net_amount_eur)    as net_revenue_eur
-    from fct_orders
+    from {{ ref('fct_orders') }}
     group by 1
     order by 1
 
@@ -34,7 +34,7 @@ queries:
     select
         sales_channel,
         sum(realised_net_amount_eur) as net_revenue_eur
-    from fct_orders
+    from {{ ref('fct_orders') }}
     group by 1
     order by net_revenue_eur desc
 
@@ -42,7 +42,7 @@ queries:
     select
         order_status,
         count(distinct order_id) as order_count
-    from fct_orders
+    from {{ ref('fct_orders') }}
     group by 1
     order by order_count desc
 
@@ -50,7 +50,7 @@ queries:
     select
         date_trunc('month', ordered_at) as month,
         avg(days_to_ship)               as avg_days_to_ship
-    from fct_orders
+    from {{ ref('fct_orders') }}
     where days_to_ship is not null
     group by 1
     order by 1

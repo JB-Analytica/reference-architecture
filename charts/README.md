@@ -7,21 +7,26 @@ charts, same three sections.
 
 ```bash
 uv tool install dbt-charts
+uv run refarch run --target prod       # the board reads the prod marts
+cd dbt && DBT_TARGET=prod uv run dbt parse && cd ..   # writes target/manifest.json
 cd charts
+mkdir -p renders                       # dct render does not create the output directory
 dct validate webshop_performance.yml
-dct render webshop_performance.yml --format html --output renders/webshop.html \
-    --ignore-warning WARN-LIKELY-CURRENCY-OR-PERCENT-MISSING-FORMATTER
+dct render webshop_performance.yml --format html --output renders/webshop.html
 ```
 
-The warehouse must already be built (`uv run refarch run`).
+`dbt parse` is a prerequisite, not a nicety: without `dbt/target/manifest.json` every `ref()`
+in the board is unresolvable. It needs no warehouse and no credentials, and `refarch transform`
+writes the same file as a side effect of building.
 
 ## What held up
 
 - **No account, no Node.** `uv tool install dbt-charts` and `dct` is all of it. DuckDB is a
-  first-class source type, so it reads `warehouse/refarch.duckdb` straight off disk exactly as
-  Evidence does.
+  first-class source type -- reached here through the dbt profile, but either way it reads
+  `warehouse/refarch.duckdb` straight off disk exactly as Evidence does.
 - **The marts stay the semantic layer.** Queries select from `fct_orders` and nothing else, so
   the repo's "column definitions live in dbt, never in a report page" rule survives intact.
+  They reach it through `{{ ref('fct_orders') }}`, not a table name -- see below.
 - **Hosting is simpler than Evidence.** `--format html` emits one self-contained file: no
   external scripts, no `fetch`, no root-absolute asset paths, fonts inlined as `@font-face`. The
   `--base-path` dance Evidence needs to live under `/reference-architecture` has no equivalent
@@ -88,11 +93,71 @@ It also only fixes HTML. PNG/SVG go through vl-convert, which needs the font ins
 machine doing the rendering; with Poppins absent the whole board renders in an oblique
 fallback.
 
+## What the dbt project link buys, measured
+
+`dbt_charts.yml` names the dbt project (`dbt_project_dir: ../dbt`) and takes its connection from
+the profile (`type: dbt_profile`) rather than pointing at `warehouse/refarch.duckdb` by path. Two
+consequences, both checked on 18 September 2026 against dbt charts 0.8.0:
+
+**One place says where the warehouse is.** The board no longer repeats the DuckDB path or the
+`refarch_marts` schema. `ref()` resolves the schema out of the manifest, and `profiles.yml`
+resolves the file -- so `DBT_TARGET`, `REFARCH_WAREHOUSE` and the dev/prod split keep working for
+the report exactly as they do for dbt. Rendering through the profile was verified end to end.
+
+**A renamed mart column fails before `dbt run`.** This is the one thing dbt charts does that
+Evidence structurally cannot. `evidence/sources/refarch/*.sql` are raw selects against table
+names; a renamed column there surfaces as a broken build or a broken page. Here it surfaces in
+`dct validate`, with no warehouse connection at all:
+
+```
+ERR-DBT-MODEL-COLUMN-MISSING  Query 'revenue_by_channel' references column 'sales_channel'
+of dbt model 'fct_orders', but the model's SQL does not produce it.
+Hint: Did you mean 'channel'?
+```
+
+That was produced by renaming `sales_channel` to `channel` in `fct_orders.sql` and running
+`dbt parse` -- no `dbt run`, no rebuilt warehouse, which still held the old column. dbt charts
+derives the model's output columns statically from the SQL recorded in the manifest.
+
+### The catch: it is inert on this repo's mart SQL as it stands
+
+Every mart here ends with the standard dbt idiom:
+
+```sql
+select * from final
+```
+
+dbt charts cannot see through that. It reports `WARN-DBT-MODEL-COLUMNS-UNRESOLVED` for each
+query -- *"a `*` projection hides the model's column list; column references against it were not
+checked"* -- and skips the check rather than guessing, which is the right call but leaves the
+feature doing nothing. Five warnings, exit 0 (they only fail under `--strict`).
+
+Replacing that last line in `fct_orders.sql` with an explicit 21-column projection made all five
+warnings disappear and turned the rename above into the error quoted. **That change is not in
+this branch**: dropping `select * from final` across the marts is a change to the house SQL style
+of a repo published as a worked example, and it should be decided on its own merits rather than
+smuggled in as a dependency's requirement. Until it is decided, the link is worth having for the
+single-source-of-truth half, and the column check is latent.
+
+The narrower fix belongs upstream: the projection inside the `final` CTE *is* explicit, and
+sqlglot can resolve a trailing `select *` through a CTE. Worth an issue alongside
+dbt-labs/dbt-charts#27.
+
 ## Still open
 
 - **Custom palettes are not theme roles.** `style.palettes` maps a role to a *shipped* palette
   name only; brand hexes go under `style.charts.color.categorical`, which works but is not the
   same cascade a theme role gets.
+- **dbt charts Cloud cannot read this warehouse, and never will.** The hosted product connects
+  only to BigQuery, Postgres, Redshift and Snowflake -- there is no DuckDB or MotherDuck
+  connection type to pick, so a local file is out and a MotherDuck account would not help
+  either. For this repo that costs nothing: the deliverable is a static build published the
+  same way the Evidence report already is, and `--format html` makes that *easier*, not harder.
+  It is worth knowing for clients, and it is a fair signal about where DuckDB sits in dbt Labs'
+  commercial attention.
+- **Not in CI yet.** `dct validate --strict` in the pull-request job is the obvious next step,
+  but it would fail today on the five unresolved-columns warnings. It goes in when the mart
+  projection question above is settled, not before.
 - **Pre-1.0.** 0.8.0, released 15 Sep 2026; the project was announced on 14 Sep. The compiler rejects unknown keys, which is good,
   but the YAML surface moved recently enough that a stale file already trips a schema-migration
   warning.
