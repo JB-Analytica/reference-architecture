@@ -111,6 +111,11 @@ uv run refarch transform build -s +fct_orders   # extra args pass through to dbt
 - **The dbt-core constraint lives in two files** — `pyproject.toml` (what uv installs) and
   `dbt/dbt_project.yml`'s `require-dbt-version` (what is allowed to run the project, including a
   system dbt). Change both; a test fails if they stop accepting the same versions.
+- **A mart ends with its projection, not `select * from final`.** Name the columns in the last
+  `select` of the file. dbt charts derives a model's output columns statically from the SQL in
+  `target/manifest.json` to catch a renamed column before `dbt run`, and it cannot see through a
+  trailing `*` -- it reports the model as underivable and silently checks nothing. CTEs above the
+  last select may still `select *` freely; only the final projection has to be explicit.
 - **Warehouse SQL is DuckDB SQL.** No `initcap`, no `timestamp_diff`, no `safe_divide`. Where
   a dialect gap needs papering over, add a macro next to `cents_to_eur` and `sentence_case` rather
   than inlining the workaround.

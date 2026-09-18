@@ -119,29 +119,51 @@ That was produced by renaming `sales_channel` to `channel` in `fct_orders.sql` a
 `dbt parse` -- no `dbt run`, no rebuilt warehouse, which still held the old column. dbt charts
 derives the model's output columns statically from the SQL recorded in the manifest.
 
-### The catch: it is inert on this repo's mart SQL as it stands
+### The one new trap: the manifest's target decides the schema
 
-Every mart here ends with the standard dbt idiom:
+`ref()` resolves to the relation recorded in `target/manifest.json`, so the target the manifest
+was parsed against and the target the board connects to have to agree. Parse against dev, render
+against `target: prod`, and every query goes looking for `refarch_dev_marts.fct_orders` in a
+warehouse that only has `refarch_marts`:
+
+```
+Catalog Error: Table with name "refarch_dev_marts.fct_orders" does not exist
+```
+
+Hardcoding `schema: refarch_marts` could not produce that; reaching the mart through `ref()` can.
+It fails loudly rather than reading the wrong data, and `DBT_TARGET=prod` in front of `dbt parse`
+is the whole fix -- in the commands above and in the CI step -- but it is a second place where
+the target has to be said, and it is easy to hit once.
+
+### What it cost: the marts no longer end `select * from final`
+
+dbt charts cannot see through a trailing `*`. With the standard dbt idiom in place it reported
+`WARN-DBT-MODEL-COLUMNS-UNRESOLVED` for all five queries -- *"a `*` projection hides the model's
+column list; column references against it were not checked"* -- and skipped the check rather than
+guessing. Right call, feature doing nothing.
+
+The fix turned out to be cheaper than expected. The `final` CTE was already an explicit
+projection; it only needed unwrapping, so the last `select` of the file *is* that projection:
 
 ```sql
+-- before                          -- after
+final as (                         )
+    select                         select
+        orders.order_id,               orders.order_id,
+        ...                            ...
+)                                  from orders
+                                   left join order_money using (order_id)
 select * from final
 ```
 
-dbt charts cannot see through that. It reports `WARN-DBT-MODEL-COLUMNS-UNRESOLVED` for each
-query -- *"a `*` projection hides the model's column list; column references against it were not
-checked"* -- and skips the check rather than guessing, which is the right call but leaves the
-feature doing nothing. Five warnings, exit 0 (they only fail under `--strict`).
+No column list is duplicated, and macro calls in projection position (`{{ cents_to_eur(...) }}`,
+`{{ sentence_case(...) }}`) do not block derivation as long as each one is aliased. All four
+marts were unwrapped this way; `dbt build` passes 69 of 69, including both reconciliation tests,
+so nothing about the output changed. The rule is written down in `CLAUDE.md` next to the other
+warehouse conventions.
 
-Replacing that last line in `fct_orders.sql` with an explicit 21-column projection made all five
-warnings disappear and turned the rename above into the error quoted. **That change is not in
-this branch**: dropping `select * from final` across the marts is a change to the house SQL style
-of a repo published as a worked example, and it should be decided on its own merits rather than
-smuggled in as a dependency's requirement. Until it is decided, the link is worth having for the
-single-source-of-truth half, and the column check is latent.
-
-The narrower fix belongs upstream: the projection inside the `final` CTE *is* explicit, and
-sqlglot can resolve a trailing `select *` through a CTE. Worth an issue alongside
-dbt-labs/dbt-charts#27.
+With that done, `dct validate --strict` is clean, the rename above fails it, and CI runs it in
+the `checks` job -- before the pipeline job builds a warehouse for the column to be missing from.
 
 ## Still open
 
@@ -155,9 +177,11 @@ dbt-labs/dbt-charts#27.
   same way the Evidence report already is, and `--format html` makes that *easier*, not harder.
   It is worth knowing for clients, and it is a fair signal about where DuckDB sits in dbt Labs'
   commercial attention.
-- **Not in CI yet.** `dct validate --strict` in the pull-request job is the obvious next step,
-  but it would fail today on the five unresolved-columns warnings. It goes in when the mart
-  projection question above is settled, not before.
+- **Board discovery does not find boards next to their own project config.** With
+  `dbt_charts.yml` inside `charts/`, a bare `dct validate` looks for `charts/charts/` and reports
+  ERR-INTERNAL. CI names the board file explicitly (`--project-dir charts webshop_performance.yml`);
+  a second board means a second line until the spike either dies or moves its config to the repo
+  root, which is the layout the tool expects.
 - **Pre-1.0.** 0.8.0, released 15 Sep 2026; the project was announced on 14 Sep. The compiler rejects unknown keys, which is good,
   but the YAML surface moved recently enough that a stale file already trips a schema-migration
   warning.

@@ -20,6 +20,22 @@ jobs:
       - run: uv run ty check refarch
       - run: uv run pytest
 
+      # The dbt charts board reaches its marts through ref(), so a renamed or dropped mart
+      # column fails here -- before the pipeline job builds a warehouse for it to be missing
+      # from. `dbt parse` writes target/manifest.json from the model SQL alone: no warehouse,
+      # no credentials, about a second. dbt charts is pinned because it is pre-1.0 and its YAML
+      # surface is still moving; see docs/versions.md.
+      - name: Validate the dbt charts board
+        # prod because the board's source declares `target: prod`: ref() takes its schema from
+        # the manifest, so a manifest parsed against dev would send the board at
+        # refarch_dev_marts while it connects to the prod one. See charts/README.md.
+        env:
+          DBT_TARGET: prod
+        run: |
+          uv run dbt parse --project-dir dbt --profiles-dir dbt
+          uvx --from dbt-charts==0.8.0 dct validate --strict \
+              --project-dir charts webshop_performance.yml
+
   pipeline:
     # The whole stack, for real, on every pull request. This is only possible because the
     # warehouse is a DuckDB file: there is no account to hold a secret for, nothing to gate the
