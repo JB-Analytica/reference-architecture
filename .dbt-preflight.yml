@@ -26,9 +26,12 @@ rows_for:
 # No `dialect`: preflight reads dbt/profiles.yml, sees duckdb, and runs the SQL as written.
 # Nothing to transpile, which is the upside of the warehouse already being DuckDB.
 #
-# No `conventions` either. The jba preset is exactly what this repo documents in CLAUDE.md and
-# docs/architecture/README.md, and the presence of this file is what makes it an error rather
-# than advice. A published example should be held to the conventions it teaches.
+# The jba preset is exactly what this repo documents in CLAUDE.md and docs/architecture/README.md,
+# and a published example should be held to the conventions it teaches. Since dbt-preflight 0.4.0
+# the house rules only warn unless a `conventions:` block asks for them, so this block is what
+# makes them errors rather than advice.
+conventions:
+  preset: jba
 
 # The numbers the comment compares between the base branch and the pull request. Preflight reads
 # dbt semantic-layer metrics and Lightdash `meta.metrics` first; this project defines neither, so
