@@ -64,8 +64,16 @@ dollar-signed euro chart.
 That second failure is the trap worth knowing about: `format: currency_whole` alone renders
 `$20,000` over euro data, at exit 0, with no warning at all.
 
-Upstream issue, for a first-class fix (a theme-level currency symbol, or `FormatConfig`
-accepted on an axis): dbt-labs/dbt-charts#27.
+**The workaround is cosmetic: screen readers still hear dollars.** The `expr` repaints only the
+visible tick text. The SVG `aria-label`s on the axis and on every mark are generated from the
+declared `currency_whole` format, so the rendered board shows `€30,000` on the axis while the
+accessible names read *"values from $0 to $42,406"* and *"Net revenue: $28,039"*. Counted on a
+render of this board: 20 of its 60 aria-labels carry a `$`, none a `€` -- identical on 0.8.0 and
+0.9.1. Nothing validates the accessibility tree, so this passes at exit 0 too.
+
+Upstream issue, for a first-class fix: dbt-labs/dbt-charts#27, where the aria-label gap was added
+on 7 October 2026. The maintainers' fix -- `FormatConfig` `prefix:` respected on an axis, which
+would replace the `expr` and the dollar format together -- is milestoned for 0.10.0.
 
 ### Brand fonts -- fixed, with one caveat
 
@@ -139,40 +147,24 @@ Already filed upstream by someone else, on Snowflake, where it is worse: dbt-lab
 reports the same mismatch serving data from the wrong *database* silently, because there the
 relation resolved. Ours failed loudly only because the dev schema does not exist in this file.
 
-### What it cost: the marts no longer end `select * from final`
+### What it used to cost: the marts no longer had to end `select * from final`
 
-dbt charts cannot see through a trailing `*`. With the standard dbt idiom in place it reported
-`WARN-DBT-MODEL-COLUMNS-UNRESOLVED` for all five queries -- *"a `*` projection hides the model's
-column list; column references against it were not checked"* -- and skipped the check rather than
-guessing. Right call, feature doing nothing.
+On 0.8.0 dbt charts could not see through a trailing `*`. With the standard dbt idiom in place it
+reported `WARN-DBT-MODEL-COLUMNS-UNRESOLVED` for all five queries -- *"a `*` projection hides the
+model's column list; column references against it were not checked"* -- and skipped the check
+rather than guessing. Right call, feature doing nothing. The spike worked around it by unwrapping
+the `final` CTE in all four marts so the last `select` of each file was the projection itself.
 
-The fix turned out to be cheaper than expected. The `final` CTE was already an explicit
-projection; it only needed unwrapping, so the last `select` of the file *is* that projection:
+That cost went away in 0.9.0. Filed upstream as dbt-labs/dbt-charts#40 -- the projection inside
+`final` is fully static, and sqlglot already resolves a `select *` against a CTE in the same
+statement -- and fixed there. Re-checked on 0.9.1 on 7 October 2026 with the marts back to
+`select * from final`, exactly as they are on `main`: `dct validate --strict` is clean, and the
+`sales_channel` rename above still fails it with `ERR-DBT-MODEL-COLUMN-MISSING`. The spike no
+longer touches `dbt/models/marts/` at all, and the repo carries no convention on dbt charts'
+behalf.
 
-```sql
--- before                          -- after
-final as (                         )
-    select                         select
-        orders.order_id,               orders.order_id,
-        ...                            ...
-)                                  from orders
-                                   left join order_money using (order_id)
-select * from final
-```
-
-No column list is duplicated, and macro calls in projection position (`{{ cents_to_eur(...) }}`,
-`{{ sentence_case(...) }}`) do not block derivation as long as each one is aliased. All four
-marts were unwrapped this way; `dbt build` passes 69 of 69, including both reconciliation tests,
-so nothing about the output changed. The rule is written down in `CLAUDE.md` next to the other
-warehouse conventions.
-
-With that done, `dct validate --strict` is clean, the rename above fails it, and CI runs it in
-the `checks` job -- before the pipeline job builds a warehouse for the column to be missing from.
-
-Filed upstream as dbt-labs/dbt-charts#40: the projection inside the `final` CTE is fully static
-and sqlglot already resolves a `select *` against a CTE in the same statement, so the tool could
-see through the idiom its own style guide recommends. If it lands, the mart rewrite stops being
-load-bearing and stays only on its own merits.
+CI runs the validate step in the `checks` job -- before the pipeline job builds a warehouse for
+the column to be missing from.
 
 ## Still open
 
@@ -191,6 +183,6 @@ load-bearing and stays only on its own merits.
   ERR-INTERNAL. CI names the board file explicitly (`--project-dir charts webshop_performance.yml`);
   a second board means a second line until the spike either dies or moves its config to the repo
   root, which is the layout the tool expects.
-- **Pre-1.0.** 0.8.0, released 15 Sep 2026; the project was announced on 14 Sep. The compiler rejects unknown keys, which is good,
-  but the YAML surface moved recently enough that a stale file already trips a schema-migration
-  warning.
+- **Pre-1.0.** Built on 0.8.0 (15 Sep 2026), now pinned to 0.9.1 (2 Oct 2026); the project was
+  announced on 14 Sep. The compiler rejects unknown keys, which is good, but the YAML surface
+  moved recently enough that a stale file already trips a schema-migration warning.

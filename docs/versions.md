@@ -68,10 +68,11 @@ the models or the semantic layer is expected to need edits.
 
 ## Why dbt charts is pinned to an exact version
 
-`ci.yml` runs `uvx --from dbt-charts==0.8.0`, not a floating range. dbt charts was announced on
-14 September 2026 and 0.8.0 shipped the day after; it is explicitly pre-1.0, its YAML surface has
-already moved enough that a stale board trips a schema-migration warning, and its compiler rejects
-unknown keys -- so an unpinned upgrade would fail CI on a board nobody touched.
+`ci.yml` runs `uvx --from dbt-charts==0.9.1`, not a floating range. dbt charts was announced on
+14 September 2026 and 0.8.0 shipped the day after; the spike was built on 0.8.0 and moved to 0.9.1
+(released 2 October 2026) on 7 October. It is explicitly pre-1.0, its YAML surface has already
+moved enough that a stale board trips a schema-migration warning, and its compiler rejects unknown
+keys -- so an unpinned upgrade would fail CI on a board nobody touched.
 
 Raise it deliberately: bump the pin, run `dct validate --strict` and `dct render` locally, and
 read the release notes for board-schema changes. `charts/README.md` records which behaviours the
