@@ -1,0 +1,16 @@
+name: refarch_charts
+
+# The dbt project is the source of truth for both halves of this board: the connection comes
+# from its `profiles.yml`, and every `ref()` below is resolved against its `target/manifest.json`.
+# Linking it here is what lets `dct validate` catch a renamed mart column before `dbt run`
+# rebuilds the warehouse -- see charts/README.md.
+dbt_project_dir: ../dbt
+
+sources:
+  # Not a path to the DuckDB file: the dbt profile, so there is exactly one place that says
+  # where the warehouse lives. `prod` for the same reason `refarch report` reads prod -- the
+  # marts a report reads are the ones `refarch run --target prod` builds.
+  warehouse:
+    type: dbt_profile
+    profile: refarch
+    target: prod

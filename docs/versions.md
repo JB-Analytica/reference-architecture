@@ -66,6 +66,19 @@ is to raise the floors in `pyproject.toml` **and** `dbt/dbt_project.yml`, re-loc
 the trial above. Nothing in
 the models or the semantic layer is expected to need edits.
 
+## Why dbt charts is pinned to an exact version
+
+`ci.yml` runs `uvx --from dbt-charts==0.9.1`, not a floating range. dbt charts was announced on
+14 September 2026 and 0.8.0 shipped the day after; the spike was built on 0.8.0 and moved to 0.9.1
+(released 2 October 2026) on 7 October. It is explicitly pre-1.0, its YAML surface has already
+moved enough that a stale board trips a schema-migration warning, and its compiler rejects unknown
+keys -- so an unpinned upgrade would fail CI on a board nobody touched.
+
+Raise it deliberately: bump the pin, run `dct validate --strict` and `dct render` locally, and
+read the release notes for board-schema changes. `charts/README.md` records which behaviours the
+spike depends on, including two workarounds (the euro axis expression and the inlined brand fonts)
+that a release could invalidate.
+
 ## Fonts
 
 Poppins and JetBrains Mono are vendored into `evidence/static/fonts` (sixteen woff2 files, 212 KB)
