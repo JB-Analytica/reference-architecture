@@ -33,7 +33,7 @@ jobs:
           DBT_TARGET: prod
         run: |
           uv run dbt parse --project-dir dbt --profiles-dir dbt
-          uvx --from dbt-charts==0.8.0 dct validate --strict \
+          uvx --from dbt-charts==0.9.1 dct validate --strict \
               --project-dir charts webshop_performance.yml
 
   pipeline:
