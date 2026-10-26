@@ -6,7 +6,8 @@ the same marts, so the two can be compared honestly -- same four headline figure
 charts, same three sections.
 
 ```bash
-uv tool install dbt-charts
+uv tool install dbt-charts==0.10.0 --with sqlglot==30.21.0   # both pins: see docs/versions.md
+export DO_NOT_TRACK=1                  # 0.10.0 sends usage statistics unless told not to
 uv run refarch run --target prod       # the board reads the prod marts
 cd dbt && DBT_TARGET=prod uv run dbt parse && cd ..   # writes target/manifest.json
 cd charts
@@ -35,45 +36,35 @@ writes the same file as a side effect of building.
 
 ## The two rough edges, and what they cost to fix
 
-### Euro formatting -- solved, with a caveat worth reading
+### Euro formatting -- solved upstream in 0.10.0
 
-`dct validate` and `dct render` both exit 0, with no CLI flags and no `warnings_ignore`
-anywhere in the board. Nothing is suppressed.
+Through 0.9.1 every documented route to a euro on a chart axis was closed: no locale, every
+`currency` preset hardcoded to a dollar, d3-format's grammar knowing only `$`, and the
+`FormatConfig` `prefix:` that works on a KPI rejected on a cartesian axis. The spike painted the
+euro with a Vega `expr` on the tick text, under a `format: currency_whole` that existed only to
+quiet `WARN-LIKELY-CURRENCY-OR-PERCENT-MISSING-FORMATTER` -- two lines that deliberately
+disagreed. And it was cosmetic: the SVG `aria-label`s are generated from the declared format, so
+screen readers heard *"Net revenue: $28,039"* on a euro chart (20 of 60 labels carried a `$` on
+0.8.0 and 0.9.1, none a `€`).
 
-Getting there is not obvious. There is no locale in the package; every `currency` preset is
-hardcoded to a dollar (`currency_whole` is `$,.0f`); d3-format's grammar has exactly one
-currency symbol, `$`, so `parse("€,.0f")` raises; and the `FormatConfig` `prefix:` that works
-on a KPI value slot is rejected on a cartesian axis, as is a `style.formats` alias. Every
-documented route is closed.
-
-The way through is a Vega expression on the label text:
+0.10.0 accepts `FormatConfig` in every number format slot (dbt-labs/dbt-charts#27, where the
+aria-label gap was raised on 7 October). The workaround is gone; both money axes now read
 
 ```yaml
 axis_y:
   labels:
-    format: currency_whole
-    expr: "'€' + format(datum.value, ',.0f')"
+    format: { spec: ",.0f", prefix: "€" }
 ```
 
-**The `format: currency_whole` under it is load-bearing, not leftover.**
-`WARN-LIKELY-CURRENCY-OR-PERCENT-MISSING-FORMATTER` inspects the *declared* format rather than
-the painted string, so without it the render warns. The two lines deliberately disagree -- the
-format says dollars, the expression paints euros. Delete one and you either get a warning or a
-dollar-signed euro chart.
+-- the same shape the KPIs already used. Measured on 26 October 2026: `dct validate --strict`
+and `dct render` exit 0 with no warnings; the ticks paint `€10,000` ... `€150,000`; and of the
+render's 57 aria-labels 16 carry a `€` and none a `$` (*"Sep 2025; Net revenue: €28,039"*). The
+axis's own summary now reads *"values from 0 to 42,406"* -- no currency, but no wrong one; the
+axis title says what the number is.
 
-That second failure is the trap worth knowing about: `format: currency_whole` alone renders
-`$20,000` over euro data, at exit 0, with no warning at all.
-
-**The workaround is cosmetic: screen readers still hear dollars.** The `expr` repaints only the
-visible tick text. The SVG `aria-label`s on the axis and on every mark are generated from the
-declared `currency_whole` format, so the rendered board shows `€30,000` on the axis while the
-accessible names read *"values from $0 to $42,406"* and *"Net revenue: $28,039"*. Counted on a
-render of this board: 20 of its 60 aria-labels carry a `$`, none a `€` -- identical on 0.8.0 and
-0.9.1. Nothing validates the accessibility tree, so this passes at exit 0 too.
-
-Upstream issue, for a first-class fix: dbt-labs/dbt-charts#27, where the aria-label gap was added
-on 7 October 2026. The maintainers' fix -- `FormatConfig` `prefix:` respected on an axis, which
-would replace the `expr` and the dollar format together -- is milestoned for 0.10.0.
+0.10.0 also adds a board-level `regional:` locale with a currency symbol. The spike does not use
+it: a locale also changes separators and puts the euro after the number, and the site prints
+`€1,234`.
 
 ### Brand fonts -- fixed, with one caveat
 
@@ -125,7 +116,8 @@ Hint: Did you mean 'channel'?
 
 That was produced by renaming `sales_channel` to `channel` in `fct_orders.sql` and running
 `dbt parse` -- no `dbt run`, no rebuilt warehouse, which still held the old column. dbt charts
-derives the model's output columns statically from the SQL recorded in the manifest.
+derives the model's output columns statically from the SQL recorded in the manifest -- with
+sqlglot, which is why sqlglot is pinned (below).
 
 ### The one new trap: the manifest's target decides the schema
 
@@ -147,6 +139,12 @@ Already filed upstream by someone else, on Snowflake, where it is worse: dbt-lab
 reports the same mismatch serving data from the wrong *database* silently, because there the
 relation resolved. Ours failed loudly only because the dev schema does not exist in this file.
 
+0.10.0 closed #9 with `target_path:` on a `dbt_profile` source: parse each target into its own
+directory (`dbt parse --target prod --target-path target/prod`) and point the source at it, so the
+manifest a board reads is tied to the target it connects to. The spike keeps `DBT_TARGET=prod`
+for now -- it has one target and the CI step already says it -- but a board that reads two
+targets should use `target_path:`.
+
 ### What it used to cost: the marts no longer had to end `select * from final`
 
 On 0.8.0 dbt charts could not see through a trailing `*`. With the standard dbt idiom in place it
@@ -162,6 +160,21 @@ statement -- and fixed there. Re-checked on 0.9.1 on 7 October 2026 with the mar
 `sales_channel` rename above still fails it with `ERR-DBT-MODEL-COLUMN-MISSING`. The spike no
 longer touches `dbt/models/marts/` at all, and the repo carries no convention on dbt charts'
 behalf.
+
+Re-checked on 0.10.0 on 26 October 2026: renaming `days_to_ship` in a board query still fails
+with `ERR-DBT-MODEL-COLUMN-MISSING` -- but only with sqlglot held at 30.21.0.
+
+### The check can switch itself off: pin sqlglot
+
+dbt charts requires `sqlglot>=30.0.0` and pins nothing tighter. From sqlglot 30.22.0 every query
+in this board reports `WARN-DBT-QUERY-COLUMNS-INDETERMINATE` (*"column-to-table attribution is
+ambiguous without a schema"*), on 0.9.1 and 0.10.0 alike, and the deliberately renamed column
+above becomes a warning instead of an error. Bisected on 26 October 2026: 30.21.0 passes, 30.22.0
+to 30.25.0 do not. CI's `--strict` turns the warning into a failure, so it would not have passed
+silently -- but a `dbt-charts==0.9.1` pin that was green on 7 October went red three weeks later
+with nothing in this repo changed, and without `--strict` the check would just have stopped
+checking. The fix here is `--with sqlglot==30.21.0` beside the dbt charts pin; the fix upstream is
+for dbt charts to bound its sqlglot range, or to make the analysis robust to it.
 
 CI runs the validate step in the `checks` job -- before the pipeline job builds a warehouse for
 the column to be missing from.
@@ -183,6 +196,13 @@ the column to be missing from.
   ERR-INTERNAL. CI names the board file explicitly (`--project-dir charts webshop_performance.yml`);
   a second board means a second line until the spike either dies or moves its config to the repo
   root, which is the layout the tool expects.
-- **Pre-1.0.** Built on 0.8.0 (15 Sep 2026), now pinned to 0.9.1 (2 Oct 2026); the project was
-  announced on 14 Sep. The compiler rejects unknown keys, which is good, but the YAML surface
-  moved recently enough that a stale file already trips a schema-migration warning.
+- **Pre-1.0.** Built on 0.8.0 (15 Sep 2026), moved to 0.9.1 (2 Oct) and now pinned to 0.10.0
+  (19 Oct); the project was announced on 14 Sep. The compiler rejects unknown keys, which is
+  good, but the YAML surface still moves: 0.10.0's notes list ten breaking changes, none of which
+  touched this board.
+- **Usage statistics are on by default** from 0.10.0. `DO_NOT_TRACK=1` turns them off; CI and
+  the commands above set it. For a repo whose point is that nothing leaves the machine, that is
+  one more thing to remember.
+- **Raw enums on the axes.** The board plots `sales_channel` and `order_status`, so it shows
+  `mobile_app` where the Evidence report shows `Mobile app`. `main` now carries `*_label`
+  columns for exactly this; a port that merged would have to use them.

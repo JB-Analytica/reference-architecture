@@ -29,11 +29,19 @@ jobs:
         # prod because the board's source declares `target: prod`: ref() takes its schema from
         # the manifest, so a manifest parsed against dev would send the board at
         # refarch_dev_marts while it connects to the prod one. See charts/README.md.
+        #
+        # sqlglot is pinned beside dbt charts because dbt charts does not pin it (>=30.0.0), and
+        # from 30.22.0 the column check gives up: every query reports
+        # WARN-DBT-QUERY-COLUMNS-INDETERMINATE and a renamed column stops being an error. A pin on
+        # dbt charts alone let that in unannounced. See docs/versions.md.
+        #
+        # DO_NOT_TRACK because dbt charts 0.10.0 sends anonymous usage statistics by default.
         env:
           DBT_TARGET: prod
+          DO_NOT_TRACK: "1"
         run: |
           uv run dbt parse --project-dir dbt --profiles-dir dbt
-          uvx --from dbt-charts==0.9.1 dct validate --strict \
+          uvx --from dbt-charts==0.10.0 --with sqlglot==30.21.0 dct validate --strict \
               --project-dir charts webshop_performance.yml
 
   pipeline:

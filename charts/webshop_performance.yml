@@ -101,19 +101,9 @@ charts:
     y: net_revenue_eur
     y_label: "Net revenue"
     style:
-      # There is no locale. Every `currency` preset is hardcoded to a dollar, d3-format's
-      # grammar has exactly one currency symbol ($), and the FormatConfig `prefix:` that the
-      # KPIs above use is rejected on a cartesian axis. So the euro is painted by a Vega
-      # expression on the label text.
-      #
-      # `format: currency_whole` underneath it is doing real work and is not dead config:
-      # WARN-LIKELY-CURRENCY-OR-PERCENT-MISSING-FORMATTER inspects the declared format, not
-      # the string that gets painted, and without it the render warns. The two deliberately
-      # disagree -- the format says dollars, the expression paints euros. Keep them together.
       axis_y:
         labels:
-          format: currency_whole
-          expr: "'€' + format(datum.value, ',.0f')"
+          format: { spec: ",.0f", prefix: "€" }
 
   revenue_by_channel_chart:
     type: bar
@@ -126,11 +116,9 @@ charts:
     y_label: "Net revenue"
     style:
       orientation: horizontal
-      # Same euro handling as revenue_trend above -- see the comment there.
       axis_y:
         labels:
-          format: currency_whole
-          expr: "'€' + format(datum.value, ',.0f')"
+          format: { spec: ",.0f", prefix: "€" }
 
   order_status_chart:
     type: bar

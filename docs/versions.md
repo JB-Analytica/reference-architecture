@@ -68,16 +68,28 @@ the models or the semantic layer is expected to need edits.
 
 ## Why dbt charts is pinned to an exact version
 
-`ci.yml` runs `uvx --from dbt-charts==0.9.1`, not a floating range. dbt charts was announced on
-14 September 2026 and 0.8.0 shipped the day after; the spike was built on 0.8.0 and moved to 0.9.1
-(released 2 October 2026) on 7 October. It is explicitly pre-1.0, its YAML surface has already
-moved enough that a stale board trips a schema-migration warning, and its compiler rejects unknown
-keys -- so an unpinned upgrade would fail CI on a board nobody touched.
+`ci.yml` runs `uvx --from dbt-charts==0.10.0 --with sqlglot==30.21.0`, not a floating range.
+dbt charts was announced on 14 September 2026 and 0.8.0 shipped the day after; the spike was built
+on 0.8.0, moved to 0.9.1 on 7 October and to 0.10.0 (released 19 October 2026) on 26 October. It
+is explicitly pre-1.0, its YAML surface has already moved enough that a stale board trips a
+schema-migration warning, and its compiler rejects unknown keys -- so an unpinned upgrade would
+fail CI on a board nobody touched.
 
-Raise it deliberately: bump the pin, run `dct validate --strict` and `dct render` locally, and
-read the release notes for board-schema changes. `charts/README.md` records which behaviours the
-spike depends on, including two workarounds (the euro axis expression and the inlined brand fonts)
-that a release could invalidate.
+**Pinning dbt charts alone did not pin the check.** dbt charts requires `sqlglot>=30.0.0`, and the
+column check is sqlglot doing the work. sqlglot 30.22.0 broke it: on both 0.9.1 and 0.10.0, every
+query in the board reports `WARN-DBT-QUERY-COLUMNS-INDETERMINATE` and a renamed mart column is no
+longer an error. Bisected on 26 October 2026: 30.21.0 passes, 30.22.0 through 30.25.0 do not. The
+same `dbt-charts==0.9.1` line that passed CI on 7 October failed `--strict` locally three weeks
+later with nothing in this repo changed. So sqlglot is pinned beside it, and moves only when a
+renamed column is shown to fail `dct validate` on the new version.
+
+Raise either pin deliberately: bump it, run `dct validate --strict` and `dct render` locally,
+rename a column the board reads and confirm `ERR-DBT-MODEL-COLUMN-MISSING`, and read the release
+notes for board-schema changes. `charts/README.md` records which behaviours the spike depends on,
+including the inlined brand fonts, the one workaround a release could still invalidate.
+
+0.10.0 also started sending anonymous usage statistics by default. CI sets `DO_NOT_TRACK=1`, and
+the commands in `charts/README.md` do too.
 
 ## Fonts
 
